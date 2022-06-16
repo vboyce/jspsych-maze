@@ -291,16 +291,17 @@ var maze = (function(jspsych) {
             groups = createGroups(stimulus, RE_WHITE_SPACE);
         }
         stimulus = stimulus.replace(RegExp("#", 'gu'), "");
-        //let lines = stimulus.split(RE_NEWLINE);
-        //console.log(stimulus)
         return (stimulus)
-        }
+    }
+
     function setupVariables(display_element, trial_pars) {
         // reset state.
         group_index     = 0;
         correct_words          = [];
         distractor_words = [];
         ctx             = null;
+        
+
 
         font = `${trial_pars.font_size}px ${trial_pars.font_family}`;
         old_html = display_element.innerHTML;
@@ -423,19 +424,13 @@ var maze = (function(jspsych) {
 
         // draw text
         ctx.fillStyle = font_color;
-        for (let i = 0; i < groups.length; i++) {
-            let group = groups[i];
-            for (let j = 0; j < group.indices.length; j++) {
-                let correct_word = correct_words[group.indices[j]];
-                let distractor_word = distractor_words[group.indices[j]];
-                if (i === group_index) {
-                    correct_word.drawText();
-                    distractor_word.drawText()
-                }
-                //else {
-               //     word.drawUnderline();
-                //}
-            }
+
+        let group = groups[group_index];
+        for (let j = 0; j < group.indices.length; j++) {
+            let correct_word = correct_words[group.indices[j]];
+            let distractor_word = distractor_words[group.indices[j]];
+            correct_word.drawText();
+            distractor_word.drawText()
         }
     }
 
