@@ -3,16 +3,51 @@ var maze = (function(jspsych) {
     const MAZE_PLUGIN_NAME = 'maze';
 
     const info = {
-        name: MAZE,
+        name: MAZE_PLUGIN_NAME,
         parameters : {
-            stimulus : {
+            correct : { // this is where the correct sentence will go
                 type :          jspsych.ParameterType.STRING,
                 pretty_name :   'Stimulus',
                 default :       undefined,
-                description :   'The string to be displayed in' +
-                    'Self paced reading moving window style'
+                description :   'The string to be displayed in Maze style'
             },
-            trial_duration : {
+            distractor: { // the distractor sentence 
+                type :          jspsych.ParameterType.STRING,
+                pretty_name :   'Stimulus',
+                default :       undefined,
+                description :   'The string to be displayed in Maze style'
+            },
+            order: { // I guess you can care about left/right presentation order
+            	type: jspsych.ParameterType.ARRAY, // let's hope this works!
+            	pretty_name: 'Order',
+            	default: null,
+            	description: "Why though"
+            },
+            redo: {
+            	type: jspsych.ParameterType.BOOL, // let's hope this works!
+            	pretty_name: 'Redo',
+            	default: true,
+            	description: "It's redo mode"
+            },
+            time: { 
+            	type: jspsych.ParameterType.FLOAT, 
+            	pretty_name: 'Time to wait',
+            	default: -1,
+            	description: "Why though"
+            },
+            error_message: { 
+            	type: jspsych.ParameterType.STRING, 
+            	pretty_name: 'Error message',
+            	default: "Wrong!",
+            	description: "Why though"
+            },
+            redo_message: { 
+            	type: jspsych.ParameterType.STRING,
+            	pretty_name: 'Redo message',
+            	default: 'Try again',
+            	description: "Why though"
+            },
+            trial_duration : { // idk I guess we can keep this
                 type :          jspsych.ParameterType.FLOAT,
                 pretty_name :   "The maximum stimulus duration",
                 default :       -1,
@@ -21,27 +56,33 @@ var maze = (function(jspsych) {
                     "will have a valid reactiontime. If the value  " +
                     "is no trial terminate timer will be set."
             },
-            choices : {
+            choice_left : { // what button does left select
                 type :          jspsych.ParameterType.KEYCODE,
-                pretty_name :   "Choices",
-                default :       [' '],
+                pretty_name :   "Choice Left",
+                default :       ['e'],
                 description :   "The keys allowed to advance a word."
             },
-            background_color : {
+            choice_right : { // what button does right select
+                type :          jspsych.ParameterType.KEYCODE,
+                pretty_name :   "Choice Left",
+                default :       ['i'],
+                description :   "The keys allowed to advance a word."
+            },
+            background_color : { //I guess this is necessary, sigh
                 type :          jspsych.ParameterType.STRING,
                 pretty_name :   "Background color",
                 default :       "rgb(255,255,255)",
                 description :   "background_color r, g and b value as javascript object such as: " +
                     "\"rgb(230,230,230)\" or \"gray\""
             },
-            font_color : {
+            font_color : { //sure why not
                 type :          jspsych.ParameterType.STRING,
                 pretty_name :   "Font color",
                 default :       'rgb(0,0,0)',
                 description :   "The rgb values in which the letters will be presented, such as: " +
                     "rgb(0,0,0)"
             },
-            font_family : {
+            font_family : { //sure why not
                 type :          jspsych.ParameterType.STRING,
                 pretty_name :   "The familiy of the font that is used to draw the words.",
                 default :       "Times New Roman",
@@ -65,7 +106,7 @@ var maze = (function(jspsych) {
                 default :       600,
                 description :   "The height of the canvas in which the spr moving window is presented"
             },
-            grouping_string : {
+            grouping_string : { //sure why not
                 type :          jspsych.ParameterType.STRING,
                 pretty_name :   "grouping string",
                 default :       null,
@@ -106,7 +147,7 @@ var maze = (function(jspsych) {
     const RE_CAP_WHITE_SPACE = RegExp(CAP_WHITE_SPACE, 'u');
     const RE_INTERPUNCTION = RegExp(INTERPUNCTION, 'u');
     const RE_WORD_INTERPUNCTION= RegExp(WORD_INTERPUNCTION, 'u');
-
+    
     /**
      * Creates a range between [start, end).
      *
@@ -171,12 +212,12 @@ var maze = (function(jspsych) {
             this.ctx.fillText(this.text, this.pos.x, this.pos.y);
         }
 
-        drawUnderline() {
+       /* drawUnderline() {
             this.ctx.beginPath();
             this.ctx.moveTo(this.pos.x, this.pos.y);
             this.ctx.lineTo(this.pos.x + this.metrics.width, this.pos.y);
             this.ctx.stroke();
-        }
+        }*/
 
         isWhiteSpace() {
             return this.text.match(/^\s+$/u) !== null;
@@ -238,10 +279,27 @@ var maze = (function(jspsych) {
     /**
      * Setup the variables for use at the start of a new trial
      */
+     
+    function doStuffToText(text, groupingString) {
+    	let stimulus = text;
+        if (groupingString) {
+            grouping_re = RegExp(groupingString, 'ug');
+            groups = createGroups(stimulus, grouping_re);
+            stimulus = stimulus.replace(grouping_re, "");
+        }
+        else {
+            groups = createGroups(stimulus, RE_WHITE_SPACE);
+        }
+        stimulus = stimulus.replace(RegExp("#", 'gu'), "");
+        //let lines = stimulus.split(RE_NEWLINE);
+        //console.log(stimulus)
+        return (stimulus)
+        }
     function setupVariables(display_element, trial_pars) {
         // reset state.
         group_index     = 0;
-        words           = [];
+        correct_words          = [];
+        distractor_words = [];
         ctx             = null;
 
         font = `${trial_pars.font_size}px ${trial_pars.font_family}`;
@@ -250,25 +308,16 @@ var maze = (function(jspsych) {
         font_color = trial_pars.font_color;
         gwidth = trial_pars.width;
         gheight = trial_pars.height;
-        valid_keys = trial_pars.choices;
+        valid_keys = trial_pars.choice_left.concat(trial_pars.choice_right);
         gelement = display_element;
         reactiontimes = [];
         groups = [];
 
         createCanvas(display_element, trial_pars);
         ctx.font = font;
-        let stimulus = trial_pars.stimulus;
-        if (trial_pars.grouping_string) {
-            grouping_re = RegExp(trial_pars.grouping_string, 'ug');
-            groups = createGroups(stimulus, grouping_re);
-            stimulus = stimulus.replace(grouping_re, "");
-        }
-        else {
-            groups = createGroups(stimulus, RE_WHITE_SPACE);
-        }
-        stimulus = stimulus.replace(RegExp("#", 'gu'), "");
-        let lines = stimulus.split(RE_NEWLINE);
-        gatherWordInfo(lines, trial_pars);
+        let correct = doStuffToText(trial_pars.correct, trial_pars.grouping_string);
+        let distractor = doStuffToText(trial_pars.distractor, trial_pars.grouping_string);
+        gatherWordInfo(correct, distractor, trial_pars);
     }
 
     /**
@@ -337,29 +386,30 @@ var maze = (function(jspsych) {
      * Processes the lines, it "measures" where each word should be.
      * the output is stored in the global plugin variable words.
      */
-    function gatherWordInfo(lines, trial_pars) {
+    function gatherWordInfo(correct,distractor, trial_pars) {
 
         let delta_y = determineLineHeight(trial_pars.font_family, trial_pars.font_size);
-        // We could add this to the trial_pars.
-        let y = delta_y * 1.5;
         let word = 0;
+        let center = trial_pars.width * .5;
+        let padding = trial_pars.width * .1;
         const BASE_Y = delta_y * 1.5; // The height on which lines begin.
         const BASE_X = BASE_Y;
 
-        for (let line = 0; line < lines.length; line++) {
-            liney = BASE_Y + line * delta_y;
-            fragments = lines[line].split(RE_CAP_WHITE_SPACE);
-            fragments = fragments.filter( word => {return word != "";});
-            let runningx = BASE_X;
-            for (let fragment = 0; fragment < fragments.length; fragment++) {
-                let current_fragment = fragments[fragment];
-                let pos = new Pos(runningx, liney);
-                let current_word = new TextInfo(current_fragment, pos, ctx);
-                if (!current_word.isWhiteSpace())
-                    words.push(current_word);
-                runningx += current_word.width();
-            }
-        }
+	    correct_fragments = correct.split(RE_CAP_WHITE_SPACE).filter(word => {return /\S/.test(word); });
+	    distractor_fragments = distractor.split(RE_CAP_WHITE_SPACE).filter(word => {return /\S/.test(word); });
+	    for (let i = 0; i < correct_fragments.length; i++) {
+			let correct_text = correct_fragments[i];
+			let correct_width=ctx.measureText(correct_text).width;
+			let correct_pos= new Pos(center-padding-correct_width, BASE_Y);
+			let correct_word = new TextInfo(correct_text, correct_pos, ctx);
+			correct_words.push(correct_word);
+			
+			let distractor_text = distractor_fragments[i];
+			let distractor_width=ctx.measureText(distractor_text).width;
+			let distractor_pos= new Pos(center+padding, BASE_Y);
+			let distractor_word = new TextInfo(distractor_text, distractor_pos, ctx);
+			distractor_words.push(distractor_word);
+	    }
     }
 
     /**
@@ -368,7 +418,7 @@ var maze = (function(jspsych) {
     function drawStimulus() {
 
         // draw background
-        ctx.fillStyle = background_color;
+        ctx.fillStyle = background_color; // it's entertaining when you don't have this
         ctx.fillRect(0, 0, gwidth, gheight);
 
         // draw text
@@ -376,13 +426,15 @@ var maze = (function(jspsych) {
         for (let i = 0; i < groups.length; i++) {
             let group = groups[i];
             for (let j = 0; j < group.indices.length; j++) {
-                let word = words[group.indices[j]];
+                let correct_word = correct_words[group.indices[j]];
+                let distractor_word = distractor_words[group.indices[j]];
                 if (i === group_index) {
-                    word.drawText();
+                    correct_word.drawText();
+                    distractor_word.drawText()
                 }
-                else {
-                    word.drawUnderline();
-                }
+                //else {
+               //     word.drawUnderline();
+                //}
             }
         }
     }
@@ -501,7 +553,7 @@ var maze = (function(jspsych) {
         return height;
     }
 
-    class SprMovingWindowPlugin {
+    class Maze {
         /**
          * Initiates the trial.
          * @param {Object} parameter
@@ -518,7 +570,7 @@ var maze = (function(jspsych) {
 
     }
 
-    SprMovingWindowPlugin.info = info;
-    return SprMovingWindowPlugin;
+    Maze.info = info;
+    return Maze;
 
 })(jsPsychModule);
