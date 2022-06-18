@@ -123,54 +123,6 @@ var maze = (function(jspsych) {
     // Reused names
     const SPR_CANVAS = "SprCanvas";
 
-    // Reused regular expressions.
-    //
-    // \p{} is for a unicode property
-    // \p{L} matches a "alfabetic" character throughout languages.
-    // see https://javascript.info/regexp-unicode
-    const CAP_WORD = '(\\p{L}+)';
-
-    // Caputure as word if it is precisely a word.
-    const WORD = '^\\p{L}+$';
-    const NUMBER = '^[0-9]+$';
-    const NEWLINE = '\n';
-    const WHITE_SPACE = '\\s';
-    const CAP_WHITE_SPACE = '(\\s)';
-    const INTERPUNCTION = "\\p{P}";
-    const WORD_INTERPUNCTION= "^\\p{L}+\\p{P}$";
-
-    const RE_CAP_WORD = RegExp(CAP_WORD, 'u');
-    const RE_WORD = RegExp(WORD, 'u');
-    const RE_NUMBER = RegExp(NUMBER, 'u');
-    const RE_NEWLINE = RegExp(NEWLINE, 'u');
-    const RE_WHITE_SPACE = RegExp(WHITE_SPACE, 'u');
-    const RE_CAP_WHITE_SPACE = RegExp(CAP_WHITE_SPACE, 'u');
-    const RE_INTERPUNCTION = RegExp(INTERPUNCTION, 'u');
-    const RE_WORD_INTERPUNCTION= RegExp(WORD_INTERPUNCTION, 'u');
-    
-    /**
-     * Creates a range between [start, end).
-     *
-     * @param start The value at which the range starts
-     * @param end   The value before which the range stops.
-     *
-     * @return an array with the range.
-     */
-    function range(start, end, step = 1) {
-        let a = []
-        if (step > 0) {
-            for (let i = start; i < end; i++)
-                a.push(i);
-        } else if(step < 0) {
-            for (let i =  start; i > end; i++)
-                a.push(i);
-        } else {
-            throw RangeError(
-                "Argument 3 (the step) must be larger or smaller than 0."
-            );
-        }
-        return a;
-    }
 
     /**
      * Class to represent the position of a word on a 2d canvas
@@ -212,56 +164,21 @@ var maze = (function(jspsych) {
             this.ctx.fillText(this.text, this.pos.x, this.pos.y);
         }
 
-       /* drawUnderline() {
-            this.ctx.beginPath();
-            this.ctx.moveTo(this.pos.x, this.pos.y);
-            this.ctx.lineTo(this.pos.x + this.metrics.width, this.pos.y);
-            this.ctx.stroke();
-        }*/
-
-        isWhiteSpace() {
-            return this.text.match(/^\s+$/u) !== null;
-        }
-
-        isWord() {
-            return this.text.match(RE_WORD) !== null;
-        }
-
-        isNumber() {
-            return this.text.match(RE_NUMBER) !== null;
-        }
-
-        isWordPlusInterpunction() {
-            return this.text.match(RE_WORD_INTERPUNCTION) !== null;
-        }
-
         width() {
             return this.metrics.width;
         }
     };
 
-    /**
-     * Class to obtain useful information about words
-     * that should be presented in a group
-     */
-    class GroupInfo {
-        /**
-         * @param indices {Array.<number>} Indices of the words to be
-         *                                 presented in this group
-         * @param record {bool}            A boolean whether or not
-         *                                 the rt of this group
-         *                                 should be recorded.
-         */
-        constructor(indices, record) {
-            this.indices = indices;
-            this.record = record;
-        }
-    };
 
     // private variables
 
     let group_index = 0;        // the nth_word that should be presented.
-    let words = [];             // array of TextInfo.
+    //let words = [];             // array of TextInfo.
+    let correct = [];
+    let distractor = [];
+    let correct_words = [];
+    let distractor_words = [];
+    let order = [];
     let old_html = "";          // the current display html, in order to
     // restore it when finished.
     let font = "";              // family of the font with px size
@@ -273,32 +190,57 @@ var maze = (function(jspsych) {
     let valid_keys = null;      // the valid keys or choices for a response
     let gelement = null;        // the element we get from jsPsych.
     let reactiontimes = [];     // store for relevant reactiontimes.
+    let responses =[];
+    let message = "";
     let groups = [];            // store groups of indices of words
+    let left_keys =[];
+    let right_keys = [];
     // to be presented together.
 
     /**
      * Setup the variables for use at the start of a new trial
      */
      
-    function doStuffToText(text, groupingString) {
+    function groupText(text, groupingString) {
     	let stimulus = text;
         if (groupingString) {
-            grouping_re = RegExp(groupingString, 'ug');
+            let grouping_re = RegExp(groupingString, 'ug');
             groups = createGroups(stimulus, grouping_re);
-            stimulus = stimulus.replace(grouping_re, "");
         }
         else {
-            groups = createGroups(stimulus, RE_WHITE_SPACE);
+            groups = createGroups(stimulus, RegExp('\\s', 'u'));
         }
-        stimulus = stimulus.replace(RegExp("#", 'gu'), "");
-        return (stimulus)
+        return (groups)
     }
+
+
+
+    /**
+     * Splits text into tokens and discards empty strings. The
+     * tokens are defined by the regular expression used to
+     * split the string.
+     *
+     * @param {String} text The text to splint into tokens
+     * @param {RegExp} re   The regular expression used to split the string
+     *
+     * @return An array of strings as tokens.
+     */
+    function createGroups(text, re) {
+        return text.split(re).filter (
+            function(word) {
+                return word != "";
+            }
+        );
+    };
 
     function setupVariables(display_element, trial_pars) {
         // reset state.
         group_index     = 0;
-        correct_words          = [];
+        correct          = [];
+        correct_words = [];
         distractor_words = [];
+        distractor = [];
+        order=[];
         ctx             = null;
         
 
@@ -310,62 +252,42 @@ var maze = (function(jspsych) {
         gwidth = trial_pars.width;
         gheight = trial_pars.height;
         valid_keys = trial_pars.choice_left.concat(trial_pars.choice_right);
+        left_keys= trial_pars.choice_left;
+        right_keys=trial_pars.choice_right;
         gelement = display_element;
         reactiontimes = [];
-        groups = [];
+        //groups = [];
 
         createCanvas(display_element, trial_pars);
+        createTextArea(display_element)
         ctx.font = font;
-        let correct = doStuffToText(trial_pars.correct, trial_pars.grouping_string);
-        let distractor = doStuffToText(trial_pars.distractor, trial_pars.grouping_string);
+        correct = groupText(trial_pars.correct, trial_pars.grouping_string);
+        distractor = groupText(trial_pars.distractor, trial_pars.grouping_string);
+        console.assert(
+            correct.length==distractor.length,
+            "Correct and distractor do not have the same length");
+        if (trial_pars.order === null) {
+            for (let i=0; i < correct.length; i++){
+                order[i]=Math.round(Math.random())
+            }
+         }
+         else {
+            order=trial_pars.order
+        }
+         console.assert(
+            correct.length==order.length,
+            "Order is not the same length as correct and distractor");
         gatherWordInfo(correct, distractor, trial_pars);
     }
 
-    /**
-     * Create groups of words that are presented together
-     * @param {String} stim the stimulus to be presented
-     * @param {RegExp} split_re
-     */
-    function createGroups(stim, split_re) {
-
-        /**
-         * Splits text into tokens and discards empty strings. The
-         * tokens are defined by the regular expression used to
-         * split the string.
-         *
-         * @param {String} text The text to splint into tokens
-         * @param {RegExp} re   The regular expression used to split the string
-         *
-         * @return An array of strings as tokens.
-         */
-        function splitIntoTokens(text, re) {
-            return text.split(re).filter (
-                function(word) {
-                    return word != "";
-                }
-            );
-        };
-
-        let nwordstotal = splitIntoTokens(stim, RE_WHITE_SPACE).length;
-        let word_indices = range(0, nwordstotal);
-        let groups = splitIntoTokens(stim, split_re);
-        let group_indices = [];
-
-        for (let nthgroup = 0; nthgroup < groups.length; nthgroup++) {
-            let record = groups[nthgroup].trim()[0] == "#";
-            let nwordsgroup = splitIntoTokens(
-                groups[nthgroup],
-                RE_WHITE_SPACE
-            ).length;
-            let indices = word_indices.slice(0, nwordsgroup);
-            word_indices = word_indices.slice(nwordsgroup);
-            group_indices.push(new GroupInfo(indices, record));
-        }
-        console.assert(
-            word_indices.length == 0,
-            "Oops it was expected that word_indices was empty by now."
-        );
-        return group_indices;
+    function createTextArea(display_element){
+        let div=document.createElement("div")
+        let text=document.createTextNode("foobar")
+        display_element.appendChild(div)
+        div.appendChild(text)
+        div.style.textAlign="center"
+        message = div.firstChild;
+        message.nodeValue="test"
     }
 
     /**
@@ -383,31 +305,30 @@ var maze = (function(jspsych) {
         ctx = canvas.getContext('2d');
     }
 
-    /**
-     * Processes the lines, it "measures" where each word should be.
-     * the output is stored in the global plugin variable words.
-     */
     function gatherWordInfo(correct,distractor, trial_pars) {
-
         let delta_y = determineLineHeight(trial_pars.font_family, trial_pars.font_size);
         let word = 0;
         let center = trial_pars.width * .5;
         let padding = trial_pars.width * .1;
         const BASE_Y = delta_y * 1.5; // The height on which lines begin.
-        const BASE_X = BASE_Y;
+        let correct_text = null
+        let distractor_text = null
+        let correct_pos = null
+        let distractor_pos = null
 
-	    correct_fragments = correct.split(RE_CAP_WHITE_SPACE).filter(word => {return /\S/.test(word); });
-	    distractor_fragments = distractor.split(RE_CAP_WHITE_SPACE).filter(word => {return /\S/.test(word); });
-	    for (let i = 0; i < correct_fragments.length; i++) {
-			let correct_text = correct_fragments[i];
-			let correct_width=ctx.measureText(correct_text).width;
-			let correct_pos= new Pos(center-padding-correct_width, BASE_Y);
+	    for (let i = 0; i < correct.length; i++) {
+			correct_text = correct[i];
+            distractor_text = distractor[i];
+            if (order[i]==0) {
+			    correct_pos= new Pos(center-padding-ctx.measureText(correct_text).width, BASE_Y);
+                distractor_pos= new Pos(center+padding, BASE_Y);
+            }
+            else {
+			    correct_pos= new Pos(center+padding, BASE_Y);
+                distractor_pos= new Pos(center-padding-ctx.measureText(distractor_text).width, BASE_Y);
+            }
 			let correct_word = new TextInfo(correct_text, correct_pos, ctx);
 			correct_words.push(correct_word);
-			
-			let distractor_text = distractor_fragments[i];
-			let distractor_width=ctx.measureText(distractor_text).width;
-			let distractor_pos= new Pos(center+padding, BASE_Y);
 			let distractor_word = new TextInfo(distractor_text, distractor_pos, ctx);
 			distractor_words.push(distractor_word);
 	    }
@@ -425,13 +346,25 @@ var maze = (function(jspsych) {
         // draw text
         ctx.fillStyle = font_color;
 
-        let group = groups[group_index];
-        for (let j = 0; j < group.indices.length; j++) {
-            let correct_word = correct_words[group.indices[j]];
-            let distractor_word = distractor_words[group.indices[j]];
-            correct_word.drawText();
-            distractor_word.drawText()
-        }
+        let correct_word = correct_words[group_index];
+        let distractor_word = distractor_words[group_index];
+        correct_word.drawText();
+        distractor_word.drawText()
+    }
+
+    function drawError() {
+
+        // draw background
+        //ctx.fillStyle = background_color; // it's entertaining when you don't have this
+        //ctx.fillRect(0, 0, gwidth, gheight);
+
+        // draw text
+        ctx.fillStyle = font_color;
+
+        let correct_word = correct_words[group_index];
+        let distractor_word = distractor_words[group_index];
+        correct_word.drawText();
+        distractor_word.drawText()
     }
 
     function installResponse(trial_pars) {
@@ -450,53 +383,9 @@ var maze = (function(jspsych) {
     function finish() {
 
         let data = {
-            rt1  : -1,
-            rt2  : -1,
-            rt3  : -1,
-            rt4  : -1,
-            rt5  : -1,
-            rt6  : -1,
-            rt7  : -1,
-            rt8  : -1,
-            rt9  : -1,
-            rt10 : -1,
-            rt11 : -1,
-            rt12 : -1,
-            rt13 : -1,
-            rt14 : -1,
-            rt15 : -1,
+            rt: reactiontimes,
+            correct: responses
         }
-
-        if (reactiontimes.length > 0)
-            data.rt1 = Math.round(reactiontimes[0]);
-        if (reactiontimes.length > 1)
-            data.rt2 = Math.round(reactiontimes[1]);
-        if (reactiontimes.length > 2)
-            data.rt3 = Math.round(reactiontimes[2]);
-        if (reactiontimes.length > 3)
-            data.rt4 = Math.round(reactiontimes[3]);
-        if (reactiontimes.length > 4)
-            data.rt5 = Math.round(reactiontimes[4]);
-        if (reactiontimes.length > 5)
-            data.rt6 = Math.round(reactiontimes[5]);
-        if (reactiontimes.length > 6)
-            data.rt7 = Math.round(reactiontimes[6]);
-        if (reactiontimes.length > 7)
-            data.rt8 = Math.round(reactiontimes[7]);
-        if (reactiontimes.length > 8)
-            data.rt9 = Math.round(reactiontimes[8]);
-        if (reactiontimes.length > 9)
-            data.rt10 = Math.round(reactiontimes[9]);
-        if (reactiontimes.length > 10)
-            data.rt11 = Math.round(reactiontimes[10]);
-        if (reactiontimes.length > 11)
-            data.rt12 = Math.round(reactiontimes[11]);
-        if (reactiontimes.length > 12)
-            data.rt13 = Math.round(reactiontimes[12]);
-        if (reactiontimes.length > 13)
-            data.rt14 = Math.round(reactiontimes[13]);
-        if (reactiontimes.length > 14)
-            data.rt15 = Math.round(reactiontimes[14]);
 
         jsPsych.pluginAPI.clearAllTimeouts();
         jsPsych.pluginAPI.cancelAllKeyboardResponses();
@@ -508,19 +397,51 @@ var maze = (function(jspsych) {
     /**
      * Callback for when the participant presses a valid key.
      */
+    
     function afterResponse(info) {
-        if (groups[group_index].record)
-            reactiontimes.push(info.rt);
-
-        group_index++;
-        if (group_index >= groups.length) {
-            finish();
+        
+        function mapKey(letter){
+            if (left_keys.includes(letter)){
+                return 0
+            }
+            if (right_keys.includes(letter)){
+                return 1
+            }
         }
-        else {
-            drawStimulus();
-            installResponse();
+
+        let selection=mapKey(info.key)
+        if (order[group_index]==selection){//correct selection
+            console.log("bar")
+            reactiontimes.push(info.rt);
+            responses.push(1);
+            group_index++;
+            if (group_index >= order.length) {
+                console.log("foo")
+                finish();
+            }
+            else {
+                drawStimulus();
+                installResponse();
+            }
+        }
+        else {//wrong selection
+            console.log("wrong!")
+            message.nodeValue="wrong"
+            jsPsych.pluginAPI.setTimeout(handleMistake, 1000);
+            reactiontimes.push(info.rt);
+            responses.push(0);
+            //group_index++;
+            //installResponse();
+            
         }
     }
+    
+    function handleMistake(){
+            console.log("again")
+            message="Please try again"
+            installResponse()
+    }   
+
 
     /**
      * Determines the expected height of a line, that is: how much should
