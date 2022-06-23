@@ -29,11 +29,17 @@ var maze = (function(jspsych) {
             	default: true,
             	description: "It's redo mode"
             },
-            time: { 
+            delay: { 
             	type: jspsych.ParameterType.FLOAT, 
             	pretty_name: 'Time to wait',
-            	default: 1000,
+            	default: 500,
             	description: ""
+            },
+            normal_message: { 
+            	type: jspsych.ParameterType.STRING,
+            	pretty_name: 'Redo message',
+            	default: '',
+            	description: "What to display normally"
             },
             error_message: { 
             	type: jspsych.ParameterType.STRING, 
@@ -71,7 +77,7 @@ var maze = (function(jspsych) {
             background_color : { //I guess this is necessary, sigh
                 type :          jspsych.ParameterType.STRING,
                 pretty_name :   "Background color",
-                default :       "rgb(255,255,255)",
+                default :       "rgb(200,255,255)",
                 description :   "background_color r, g and b value as javascript object such as: " +
                     "\"rgb(230,230,230)\" or \"gray\""
             },
@@ -97,13 +103,13 @@ var maze = (function(jspsych) {
             width : {
                 type :          jspsych.ParameterType.INT,
                 pretty_name :   "width",
-                default :       900,
+                default :       600,
                 description :   "The width of the canvas in which the spr moving window is presented."
             },
             height : {
                 type :          jspsych.ParameterType.INT,
                 pretty_name :   "height",
-                default :       600,
+                default :       100,
                 description :   "The height of the canvas in which the spr moving window is presented"
             },
             grouping_string : { //sure why not
@@ -202,6 +208,8 @@ var maze = (function(jspsych) {
     let cumulative_rt=0;
     let first=true;
     let delay=null;
+    let normal_message=""
+    let redo=null
     // to be presented together.
 
     /**
@@ -264,17 +272,18 @@ var maze = (function(jspsych) {
         gelement = display_element;
         reactiontimes = [];
         //groups = [];
-
+        error_message = trial_pars.error_message;
+        redo_message = trial_pars.redo_message;
+        normal_message = trial_pars.normal_message;
         createCanvas(display_element, trial_pars);
         div = createTextArea(display_element)
         //display_element.appendChild(div)
-        //div.innerHTML='<p style="color:blue;size:20;"> bladjfkleajlkre!</p>'
+        div.innerHTML=normal_message
         ctx.font = font;
         correct = groupText(trial_pars.correct, trial_pars.grouping_string);
         distractor = groupText(trial_pars.distractor, trial_pars.grouping_string);
-        error_message = trial_pars.error_message;
-        redo_message = trial_pars.redo_message;
-        delay=trial_pars.time;
+        redo=trial_pars.redo
+        delay=trial_pars.delay;
         console.assert(
             correct.length==distractor.length,
             "Correct and distractor do not have the same length");
@@ -295,7 +304,11 @@ var maze = (function(jspsych) {
     function createTextArea(display_element){
         let div=document.createElement("div")
         display_element.appendChild(div)
-        div.style.textAlign="center"
+        div.style.height="200px"
+        div.style.backgroundColor= "lightblue";
+        div.style.display="flex"
+        div.style.justifyContent="center"
+        div.style.alignContent="center"
         return(div)
     }
 
@@ -381,7 +394,10 @@ var maze = (function(jspsych) {
         let data = {
             rt: reactiontimes,
             cumrt: totalrts,
-            correct: responses
+            correct: responses,
+            words: correct,
+            distractors: distractor,
+            order: order,
         }
 
         jsPsych.pluginAPI.clearAllTimeouts();
@@ -425,16 +441,25 @@ var maze = (function(jspsych) {
                 finish();
             }
             else {
-                div.innerHTML=""
+                div.innerHTML=normal_message
                 drawStimulus();
                 installResponse();
             }
         }
         else {//wrong selection
             first=false
-            cumulative_rt+=delay
-            div.innerHTML=error_message
-            jsPsych.pluginAPI.setTimeout(handleMistake, delay);
+            if (redo==false) {
+                reactiontimes.push(info.rt)
+                finish();
+            }
+            if (delay===null){
+                handleMistake()
+            }
+            else{
+                cumulative_rt+=delay
+                div.innerHTML=error_message
+                jsPsych.pluginAPI.setTimeout(handleMistake, delay);
+            }
         }
     }
     
