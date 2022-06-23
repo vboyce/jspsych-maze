@@ -32,20 +32,20 @@ var maze = (function(jspsych) {
             time: { 
             	type: jspsych.ParameterType.FLOAT, 
             	pretty_name: 'Time to wait',
-            	default: -1,
-            	description: "Why though"
+            	default: 1000,
+            	description: ""
             },
             error_message: { 
             	type: jspsych.ParameterType.STRING, 
             	pretty_name: 'Error message',
-            	default: "Wrong!",
-            	description: "Why though"
+            	default: '<p style="color:red;font-size:40px;"> Wrong!</p>',
+            	description: "What to display on mistakes"
             },
             redo_message: { 
             	type: jspsych.ParameterType.STRING,
             	pretty_name: 'Redo message',
-            	default: 'Try again',
-            	description: "Why though"
+            	default: '<p style="color:blue;font-size:40px;"> Try again.</p>',
+            	description: "What to display post mistake once keypresses will record"
             },
             trial_duration : { // idk I guess we can keep this
                 type :          jspsych.ParameterType.FLOAT,
@@ -190,11 +190,18 @@ var maze = (function(jspsych) {
     let valid_keys = null;      // the valid keys or choices for a response
     let gelement = null;        // the element we get from jsPsych.
     let reactiontimes = [];     // store for relevant reactiontimes.
+    let totalrts=[];
     let responses =[];
     let message = "";
     let groups = [];            // store groups of indices of words
     let left_keys =[];
     let right_keys = [];
+    let error_message = ""
+    let redo_message = ""
+    let rt_first=0;
+    let cumulative_rt=0;
+    let first=true;
+    let delay=null;
     // to be presented together.
 
     /**
@@ -259,10 +266,15 @@ var maze = (function(jspsych) {
         //groups = [];
 
         createCanvas(display_element, trial_pars);
-        createTextArea(display_element)
+        div = createTextArea(display_element)
+        //display_element.appendChild(div)
+        //div.innerHTML='<p style="color:blue;size:20;"> bladjfkleajlkre!</p>'
         ctx.font = font;
         correct = groupText(trial_pars.correct, trial_pars.grouping_string);
         distractor = groupText(trial_pars.distractor, trial_pars.grouping_string);
+        error_message = trial_pars.error_message;
+        redo_message = trial_pars.redo_message;
+        delay=trial_pars.time;
         console.assert(
             correct.length==distractor.length,
             "Correct and distractor do not have the same length");
@@ -282,12 +294,9 @@ var maze = (function(jspsych) {
 
     function createTextArea(display_element){
         let div=document.createElement("div")
-        let text=document.createTextNode("foobar")
         display_element.appendChild(div)
-        div.appendChild(text)
         div.style.textAlign="center"
-        message = div.firstChild;
-        message.nodeValue="test"
+        return(div)
     }
 
     /**
@@ -338,7 +347,6 @@ var maze = (function(jspsych) {
      * Draws the stimulus on the canvas.
      */
     function drawStimulus() {
-
         // draw background
         ctx.fillStyle = background_color; // it's entertaining when you don't have this
         ctx.fillRect(0, 0, gwidth, gheight);
@@ -352,22 +360,10 @@ var maze = (function(jspsych) {
         distractor_word.drawText()
     }
 
-    function drawError() {
 
-        // draw background
-        //ctx.fillStyle = background_color; // it's entertaining when you don't have this
-        //ctx.fillRect(0, 0, gwidth, gheight);
-
-        // draw text
-        ctx.fillStyle = font_color;
-
-        let correct_word = correct_words[group_index];
-        let distractor_word = distractor_words[group_index];
-        correct_word.drawText();
-        distractor_word.drawText()
-    }
 
     function installResponse(trial_pars) {
+        
         jsPsych.pluginAPI.getKeyboardResponse(
             {
                 callback_function : afterResponse,
@@ -384,6 +380,7 @@ var maze = (function(jspsych) {
 
         let data = {
             rt: reactiontimes,
+            cumrt: totalrts,
             correct: responses
         }
 
@@ -410,35 +407,39 @@ var maze = (function(jspsych) {
         }
 
         let selection=mapKey(info.key)
+        if (first==true){ //record reaction time
+            reactiontimes.push(info.rt)
+            if (order[group_index]==selection){//correct selection
+                responses.push(1);
+            }
+            else {responses.push(0)}
+        }
+        cumulative_rt+=info.rt
+ 
         if (order[group_index]==selection){//correct selection
-            console.log("bar")
-            reactiontimes.push(info.rt);
-            responses.push(1);
+            totalrts.push(cumulative_rt)
             group_index++;
+            cumulative_rt=0
+            first=true
             if (group_index >= order.length) {
-                console.log("foo")
                 finish();
             }
             else {
+                div.innerHTML=""
                 drawStimulus();
                 installResponse();
             }
         }
         else {//wrong selection
-            console.log("wrong!")
-            message.nodeValue="wrong"
-            jsPsych.pluginAPI.setTimeout(handleMistake, 1000);
-            reactiontimes.push(info.rt);
-            responses.push(0);
-            //group_index++;
-            //installResponse();
-            
+            first=false
+            cumulative_rt+=delay
+            div.innerHTML=error_message
+            jsPsych.pluginAPI.setTimeout(handleMistake, delay);
         }
     }
     
     function handleMistake(){
-            console.log("again")
-            message="Please try again"
+            div.innerHTML=redo_message
             installResponse()
     }   
 
