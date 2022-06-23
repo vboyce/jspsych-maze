@@ -21,23 +21,23 @@ var maze = (function(jspsych) {
             	type: jspsych.ParameterType.ARRAY, // let's hope this works!
             	pretty_name: 'Order',
             	default: null,
-            	description: "Why though"
+            	description: "Why though" //TODO check this works
             },
             redo: {
-            	type: jspsych.ParameterType.BOOL, // let's hope this works!
+            	type: jspsych.ParameterType.BOOL,
             	pretty_name: 'Redo',
             	default: true,
             	description: "It's redo mode"
             },
             delay: { 
             	type: jspsych.ParameterType.FLOAT, 
-            	pretty_name: 'Time to wait',
+            	pretty_name: 'Delay',
             	default: 500,
-            	description: ""
+            	description: "Time to wait after a mistake before registering next keypress"
             },
             normal_message: { 
             	type: jspsych.ParameterType.STRING,
-            	pretty_name: 'Redo message',
+            	pretty_name: 'Normal message',
             	default: '',
             	description: "What to display normally"
             },
@@ -45,7 +45,7 @@ var maze = (function(jspsych) {
             	type: jspsych.ParameterType.STRING, 
             	pretty_name: 'Error message',
             	default: '<p style="color:red;font-size:40px;"> Wrong!</p>',
-            	description: "What to display on mistakes"
+            	description: "What to display on mistakes during delay"
             },
             redo_message: { 
             	type: jspsych.ParameterType.STRING,
@@ -53,31 +53,28 @@ var maze = (function(jspsych) {
             	default: '<p style="color:blue;font-size:40px;"> Try again.</p>',
             	description: "What to display post mistake once keypresses will record"
             },
-            trial_duration : { // idk I guess we can keep this
+            trial_duration : { 
                 type :          jspsych.ParameterType.FLOAT,
                 pretty_name :   "The maximum stimulus duration",
                 default :       -1,
-                description :   "The maximum amount of time a trial lasts." +
-                    "if the timer expires, only the recorded words " +
-                    "will have a valid reactiontime. If the value  " +
-                    "is no trial terminate timer will be set."
+                description :   "The maximum amount of time a trial lasts." 
             },
-            choice_left : { // what button does left select
+            choice_left : { 
                 type :          jspsych.ParameterType.KEYCODE,
                 pretty_name :   "Choice Left",
                 default :       ['e'],
-                description :   "The keys allowed to advance a word."
+                description :   "The keys that select the left-side word."
             },
-            choice_right : { // what button does right select
+            choice_right : { 
                 type :          jspsych.ParameterType.KEYCODE,
                 pretty_name :   "Choice Left",
                 default :       ['i'],
-                description :   "The keys allowed to advance a word."
+                description :   "The keys that select the right-side word."
             },
-            background_color : { //I guess this is necessary, sigh
+            background_color : { 
                 type :          jspsych.ParameterType.STRING,
                 pretty_name :   "Background color",
-                default :       "rgb(200,255,255)",
+                default :       "rgb(255,255,255)",
                 description :   "background_color r, g and b value as javascript object such as: " +
                     "\"rgb(230,230,230)\" or \"gray\""
             },
@@ -179,14 +176,11 @@ var maze = (function(jspsych) {
     // private variables
 
     let group_index = 0;        // the nth_word that should be presented.
-    //let words = [];             // array of TextInfo.
     let correct = [];
     let distractor = [];
     let correct_words = [];
     let distractor_words = [];
     let order = [];
-    let old_html = "";          // the current display html, in order to
-    // restore it when finished.
     let font = "";              // family of the font with px size
     let background_color = "";  // the color of the paper of the text.
     let font_color = "";        // the color of the text.
@@ -194,23 +188,20 @@ var maze = (function(jspsych) {
     let gwidth = 0;             // width of the canvas
     let gheight = 0;            // and the height.
     let valid_keys = null;      // the valid keys or choices for a response
-    let gelement = null;        // the element we get from jsPsych.
     let reactiontimes = [];     // store for relevant reactiontimes.
-    let totalrts=[];
+    let cumulative_rts=[];
     let responses =[];
-    let message = "";
-    let groups = [];            // store groups of indices of words
+
     let left_keys =[];
     let right_keys = [];
     let error_message = ""
     let redo_message = ""
-    let rt_first=0;
     let cumulative_rt=0;
     let first=true;
     let delay=null;
     let normal_message=""
     let redo=null
-    // to be presented together.
+    
 
     /**
      * Setup the variables for use at the start of a new trial
@@ -269,9 +260,7 @@ var maze = (function(jspsych) {
         valid_keys = trial_pars.choice_left.concat(trial_pars.choice_right);
         left_keys= trial_pars.choice_left;
         right_keys=trial_pars.choice_right;
-        gelement = display_element;
         reactiontimes = [];
-        //groups = [];
         error_message = trial_pars.error_message;
         redo_message = trial_pars.redo_message;
         normal_message = trial_pars.normal_message;
@@ -393,7 +382,7 @@ var maze = (function(jspsych) {
 
         let data = {
             rt: reactiontimes,
-            cumrt: totalrts,
+            cumrt: cumulative_rts,
             correct: responses,
             words: correct,
             distractors: distractor,
@@ -403,7 +392,6 @@ var maze = (function(jspsych) {
         jsPsych.pluginAPI.clearAllTimeouts();
         jsPsych.pluginAPI.cancelAllKeyboardResponses();
 
-        gelement.innerHTML = old_html;
         jsPsych.finishTrial(data);
     }
 
@@ -433,7 +421,7 @@ var maze = (function(jspsych) {
         cumulative_rt+=info.rt
  
         if (order[group_index]==selection){//correct selection
-            totalrts.push(cumulative_rt)
+            cumulative_rts.push(cumulative_rt)
             group_index++;
             cumulative_rt=0
             first=true
