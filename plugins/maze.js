@@ -175,49 +175,44 @@ var maze = (function(jspsych) {
 
     // private variables
 
-    let group_index = 0;        // the nth_word that should be presented.
-    let correct = [];
-    let distractor = [];
-    let correct_words = [];
-    let distractor_words = [];
-    let order = [];
+    let group_index = 0;        // keep track of word position
+    let correct = [];           // list of correct words
+    let distractor = [];        // list of distractor words
+    let correct_words = [];     // list of correct words & where to display them
+    let distractor_words = [];  // list of distractors & where to display them
+    let order = [];             // list of whether correct word is left or right
+    
+    let old_html=""             // be able to reset at end of trial
     let font = "";              // family of the font with px size
     let background_color = "";  // the color of the paper of the text.
     let font_color = "";        // the color of the text.
     let ctx = null;             // 2D drawing context
     let gwidth = 0;             // width of the canvas
     let gheight = 0;            // and the height.
+    let gelement = null;        // where things are displayed
     let valid_keys = null;      // the valid keys or choices for a response
-    let reactiontimes = [];     // store for relevant reactiontimes.
-    let cumulative_rts=[];
-    let responses =[];
+    let left_keys =[];          // keys to select left option
+    let right_keys = [];        // keys to select right option
 
-    let left_keys =[];
-    let right_keys = [];
-    let error_message = ""
+    let reactiontimes = [];     // store for rts to first press
+    let cumulative_rts=[];      // store for rts to correct press
+    let cumulative_rt=0;        // count up cumulative rt per word
+    let responses =[];          // stores responses (correct / incorrect)
+
+    
+    let error_message = ""      // message options
     let redo_message = ""
-    let cumulative_rt=0;
-    let first=true;
-    let delay=null;
     let normal_message=""
-    let redo=null
+
+    let first=true;             // is this the first try?
+
+    let delay=null;             // what is time delay before redoing
+    let redo=null               // are we in redo mode
     
 
-    /**
-     * Setup the variables for use at the start of a new trial
-     */
+
      
-    function groupText(text, groupingString) {
-    	let stimulus = text;
-        if (groupingString) {
-            let grouping_re = RegExp(groupingString, 'ug');
-            groups = createGroups(stimulus, grouping_re);
-        }
-        else {
-            groups = createGroups(stimulus, RegExp('\\s', 'u'));
-        }
-        return (groups)
-    }
+
 
 
 
@@ -239,20 +234,36 @@ var maze = (function(jspsych) {
         );
     };
 
+    /**
+    * Takes a text and grouping string, splits it on that
+    * returns the list of groups (usually words)
+    * but other groupingStrings will allow for other splits.
+    */
+    function groupText(text, groupingString) {
+    	let stimulus = text;
+        if (groupingString) {
+            let grouping_re = RegExp(groupingString, 'ug');
+            groups = createGroups(stimulus, grouping_re);
+        }
+        else {
+            groups = createGroups(stimulus, RegExp('\\s', 'u'));
+        }
+        return (groups)
+    }
+
+    /**
+     * Setup the variables for use at the start of a new trial
+     */
     function setupVariables(display_element, trial_pars) {
         // reset state.
         group_index     = 0;
-        correct          = [];
         correct_words = [];
         distractor_words = [];
-        distractor = [];
         order=[];
         ctx             = null;
         
-
-
+        //copy a lot of trial pars
         font = `${trial_pars.font_size}px ${trial_pars.font_family}`;
-        old_html = display_element.innerHTML;
         background_color = trial_pars.background_color;
         font_color = trial_pars.font_color;
         gwidth = trial_pars.width;
@@ -264,15 +275,22 @@ var maze = (function(jspsych) {
         error_message = trial_pars.error_message;
         redo_message = trial_pars.redo_message;
         normal_message = trial_pars.normal_message;
-        createCanvas(display_element, trial_pars);
-        div = createTextArea(display_element)
-        //display_element.appendChild(div)
-        div.innerHTML=normal_message
-        ctx.font = font;
-        correct = groupText(trial_pars.correct, trial_pars.grouping_string);
-        distractor = groupText(trial_pars.distractor, trial_pars.grouping_string);
         redo=trial_pars.redo
         delay=trial_pars.delay;
+
+        //set up display
+        gelement=display_element
+        old_html = display_element.innerHTML;
+        let foo = createTextArea(display_element)
+        createCanvas(display_element, trial_pars);
+        div = createTextArea(display_element)
+        div.innerHTML=normal_message
+        ctx.font = font;
+        
+        // process stimuli
+        correct = groupText(trial_pars.correct, trial_pars.grouping_string);
+        distractor = groupText(trial_pars.distractor, trial_pars.grouping_string);
+        //check that things that should be the same length are!
         console.assert(
             correct.length==distractor.length,
             "Correct and distractor do not have the same length");
@@ -287,14 +305,14 @@ var maze = (function(jspsych) {
          console.assert(
             correct.length==order.length,
             "Order is not the same length as correct and distractor");
+
         gatherWordInfo(correct, distractor, trial_pars);
     }
 
     function createTextArea(display_element){
         let div=document.createElement("div")
         display_element.appendChild(div)
-        div.style.height="200px"
-        div.style.backgroundColor= "lightblue";
+        div.style.height="300px"
         div.style.display="flex"
         div.style.justifyContent="center"
         div.style.alignContent="center"
@@ -311,6 +329,9 @@ var maze = (function(jspsych) {
         let canvas = document.createElement('canvas')
         canvas.setAttribute("width", trial_pars.width);
         canvas.setAttribute("height", trial_pars.height);
+        canvas.style.padding=0;
+        canvas.style.display="block";
+        canvas.style.margin="auto";
         canvas.setAttribute("id", SPR_CANVAS);
         display_element.appendChild(canvas);
         ctx = canvas.getContext('2d');
@@ -391,7 +412,7 @@ var maze = (function(jspsych) {
 
         jsPsych.pluginAPI.clearAllTimeouts();
         jsPsych.pluginAPI.cancelAllKeyboardResponses();
-
+        gelement.innerHTML = old_html;
         jsPsych.finishTrial(data);
     }
 
@@ -411,16 +432,17 @@ var maze = (function(jspsych) {
         }
 
         let selection=mapKey(info.key)
-        if (first==true){ //record reaction time
+        if (first==true){ //this is their first try
             reactiontimes.push(info.rt)
             if (order[group_index]==selection){//correct selection
                 responses.push(1);
             }
-            else {responses.push(0)}
+            else {responses.push(0)} //incorrect selection
         }
         cumulative_rt+=info.rt
  
         if (order[group_index]==selection){//correct selection
+        //reset things to move onto next word
             cumulative_rts.push(cumulative_rt)
             group_index++;
             cumulative_rt=0
@@ -436,14 +458,14 @@ var maze = (function(jspsych) {
         }
         else {//wrong selection
             first=false
-            if (redo==false) {
+            if (redo==false) { //end this
                 reactiontimes.push(info.rt)
                 finish();
             }
-            if (delay===null){
+            if (delay===null){ //go directly to redo
                 handleMistake()
             }
-            else{
+            else{ //do delay, then redo
                 cumulative_rt+=delay
                 div.innerHTML=error_message
                 jsPsych.pluginAPI.setTimeout(handleMistake, delay);
