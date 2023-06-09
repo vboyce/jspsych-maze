@@ -1,6 +1,6 @@
 
 
-
+const WELCOME_INSTRUCTION = ""
 const PRE_PRACTICE_INSTRUCTION =
     "<h1>"                                                              +
         "Task instructions"                                            +

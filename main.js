@@ -1,3 +1,5 @@
+import {initJsPsych} from 'jspsych';
+//var _ = require('lodash');
 let jsPsych = initJsPsych({
     exclusions: {
         min_width : "600px",
@@ -5,27 +7,51 @@ let jsPsych = initJsPsych({
     }
 });
 //TODO add a stimuli checker for length
+
 // add a thing that does counterbalancing w/o lists
 /* given a list of grouped types -- determine item numbers for each set
 then randomize 1/2 of the items to be each type 
 then take the lists and shuffle all together
 
-
 */
+function shuffle(arr) {
+    var i = arr.length, j, temp;
+    while(--i > 0){
+      j = Math.floor(Math.random()*(i+1));
+      temp = arr[j];
+      arr[j] = arr[i];
+      arr[i] = temp;
+    }
+  }
+
 function counterbalance(item_types, items){
-    select_items=[]
-    for (i = 0; i < item_types.length; i++) {
-        let candidates = [];
-        relevant = items.filter(item => {return (item_types[i].includes(item.item_type))})
+    let select_items=[]
+    for (let i = 0; i < item_types.length; i++) { // for each grouping
+        let relevant = items.filter(item => {return (item_types[i].includes(item.item_type))}) // items of this grouping
+        let relevant_ids=[];
+        shuffle(relevant_ids)
         relevant.forEach(item => {
-            if (!candidates.includes(item.id)) {candidates.push(item.id)}});
-        _.shuffle(candidates)
-        select_items.push(candidates)
-}
-return(select_items)
+            if (!relevant_ids.includes(item.id)){relevant_ids.push(item.id)}});
+            for (let j=0; j<item_types[i].length; j++){
+            let item_type=item_types[i][j];
+            let frac=relevant_ids.length/item_types[i].length;
+            let start=Math.floor(j*frac);
+            let end=Math.floor((j+1)*frac);
+            for(let k=start; k<end; k++){
+                let id = relevant_ids[k];
+                relevant.forEach(item=>{
+                    if(item.id==id & item.item_type==item_type){
+                        select_items.push(item)
+                    }});
+            }
+        }    
+    }
+    shuffle(select_items)
+    return(select_items)
 }
 
-ITEM_TYPES = [["filler"],
+
+let ITEM_TYPES = [["filler"],
                 ["and_comma","and_no_comma"],
                 ["relative_high","relative_low"],
                 ["adverb_high", "adverb_low"]]
@@ -81,7 +107,7 @@ let end_experiment = {
     choices : [],
     on_load: function() {
         //if (consent_given) {
-            uil.saveData();
+            //uil.saveData();
         //}
         //else {
             //document.body.innerHTML = FINISHED_NO_CONSENT;
@@ -142,10 +168,12 @@ function main() {
     let stimuli = STIMULI;
     //uil.browser.rejectMobileOrTablet();
     let timeline=getTimeline(stimuli)
-    console.log(timeline)
+    //console.log(timeline)
     jsPsych.run(timeline);
 
 }
+
+window.addEventListener('load', main);
 
 
 

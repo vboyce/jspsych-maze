@@ -385,98 +385,15 @@ var maze = (function(jspsych) {
 
 
 
-    function installResponse(trial_pars) {
-        
-        jsPsych.pluginAPI.getKeyboardResponse(
-            {
-                callback_function : afterResponse,
-                valid_responses : valid_keys,
-                rt_method : 'performance',
-                persist : false, // We reinstall the response, because
-                // otherwise the rt is cumulative.
-                allow_held_key: false
-            }
-        );
-    }
+    
 
-    function finish() {
 
-        let data = {
-            rt: reactiontimes,
-            cumrt: cumulative_rts,
-            correct: responses,
-            words: correct,
-            distractors: distractor,
-            order: order,
-        }
-
-        jsPsych.pluginAPI.clearAllTimeouts();
-        jsPsych.pluginAPI.cancelAllKeyboardResponses();
-        gelement.innerHTML = old_html;
-        jsPsych.finishTrial(data);
-    }
 
     /**
      * Callback for when the participant presses a valid key.
      */
     
-    function afterResponse(info) {
-        
-        function mapKey(letter){
-            if (left_keys.includes(letter)){
-                return 0
-            }
-            if (right_keys.includes(letter)){
-                return 1
-            }
-        }
-
-        let selection=mapKey(info.key)
-        if (first==true){ //this is their first try
-            reactiontimes.push(info.rt)
-            if (order[group_index]==selection){//correct selection
-                responses.push(1);
-            }
-            else {responses.push(0)} //incorrect selection
-        }
-        cumulative_rt+=info.rt
- 
-        if (order[group_index]==selection){//correct selection
-        //reset things to move onto next word
-            cumulative_rts.push(cumulative_rt)
-            group_index++;
-            cumulative_rt=0
-            first=true
-            if (group_index >= order.length) {
-                finish();
-            }
-            else {
-                div.innerHTML=normal_message
-                drawStimulus();
-                installResponse();
-            }
-        }
-        else {//wrong selection
-            first=false
-            if (redo==false) { //end this
-                reactiontimes.push(info.rt)
-                finish();
-            }
-            if (delay===null){ //go directly to redo
-                handleMistake()
-            }
-            else{ //do delay, then redo
-                cumulative_rt+=delay
-                div.innerHTML=error_message
-                jsPsych.pluginAPI.setTimeout(handleMistake, delay);
-            }
-        }
-    }
-    
-    function handleMistake(){
-            div.innerHTML=redo_message
-            installResponse()
-    }   
+       
 
 
     /**
@@ -510,13 +427,108 @@ var maze = (function(jspsych) {
          * Initiates the trial.
          * @param {Object} parameter
          */
-        trial(display_element, trial_pars) {
+        constructor(jsPsych) {
+            this.jsPsych = jsPsych;
+          }
+
+        installResponse = (trial_pars) => {
+            var afterResponse=this.afterResponse
+
+            this.jsPsych.pluginAPI.getKeyboardResponse(
+
+                {
+                    callback_function : afterResponse,
+                    valid_responses : valid_keys,
+                    rt_method : 'performance',
+                    persist : false, // We reinstall the response, because
+                    // otherwise the rt is cumulative.
+                    allow_held_key: false
+                }
+            );
+        }
+
+        afterResponse = (info) =>{
+        
+            function mapKey(letter){
+                if (left_keys.includes(letter)){
+                    return 0
+                }
+                if (right_keys.includes(letter)){
+                    return 1
+                }
+            }
+    
+            let selection=mapKey(info.key)
+            if (first==true){ //this is their first try
+                reactiontimes.push(info.rt)
+                if (order[group_index]==selection){//correct selection
+                    responses.push(1);
+                }
+                else {responses.push(0)} //incorrect selection
+            }
+            cumulative_rt+=info.rt
+     
+            if (order[group_index]==selection){//correct selection
+            //reset things to move onto next word
+                cumulative_rts.push(cumulative_rt)
+                group_index++;
+                cumulative_rt=0
+                first=true
+                if (group_index >= order.length) {
+                    this.finish();
+                }
+                else {
+                    div.innerHTML=normal_message
+                    drawStimulus();
+                    this.installResponse();
+                }
+            }
+            else {//wrong selection
+                first=false
+                if (redo==false) { //end this
+                    reactiontimes.push(info.rt)
+                    this.finish();
+                }
+                if (delay===null){ //go directly to redo
+                    this.handleMistake()
+                }
+                else{ //do delay, then redo
+                    cumulative_rt+=delay
+                    div.innerHTML=error_message
+                    this.jsPsych.pluginAPI.setTimeout(this.handleMistake, delay);
+                }
+            }
+        }
+        
+        handleMistake =() => {
+                div.innerHTML=redo_message
+                this.installResponse()
+        }
+        
+        finish  = () => {
+
+            let data = {
+                rt: reactiontimes,
+                cumrt: cumulative_rts,
+                correct: responses,
+                words: correct,
+                distractors: distractor,
+                order: order,
+            }
+    
+            this.jsPsych.pluginAPI.clearAllTimeouts();
+            this.jsPsych.pluginAPI.cancelAllKeyboardResponses();
+            gelement.innerHTML = old_html;
+            this.jsPsych.finishTrial(data);
+        }
+
+        trial(display_element, trial_pars){
 
             setupVariables(display_element, trial_pars);
-            installResponse();
+            this.installResponse();
             drawStimulus();
             if (trial_pars.trial_duration >= 0) {
-                jsPsych.pluginAPI.setTimeout(finish, trial_pars.trial_duration);
+                this.jsPsych.pluginAPI.setTimeout(this.finish, trial_pars.trial_duration);
             }
         }
 
