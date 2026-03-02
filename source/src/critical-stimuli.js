@@ -1,0 +1,23 @@
+export const stimuli=[
+{sent:"The student who was running out of money gave himself a haircut last week.", distractor:"x-x-x derived bad mid reality sin let based weak contain map coffers step baby."},
+{ sent:"Kim will display the photos she took next month, but she won't show all of them.", distractor:"x-x-x milk dealing sit compel eat thin poem older, us thy scale soft ran eat soon."},
+{ sent:"The boyfriend of the model was killed in an accident while skiing last week.", distractor:"x-x-x detectors joy won shall sin prices sin put petition exist cigars tell hear."},
+{sent:"The witness identified the man and his wife ran away from the police station.", distractor:"x-x-x creates relatively sky my ice mid meet air sale seen won either develop."},
+{sent:"The aunt of the waiter who trained himself to cook wanted to own a restaurant.", distractor:"x-x-x unto joy per midway net essence pattern map wars report ago we map correspond."},
+{sent:"Todd wanted to be a barber, but his shaky hands prevented him from becoming one.", distractor:"x-x-x advice sun nor sin gladly, net us plums month proposals net dark absolute am."},
+{ sent:"Jenny talked to the reporter, and the photographer took pictures of the scene.", distractor:"x-x-x deeper net ran dividing mid thy transitional laws increase our nor knows."},
+{ sent:"The niece of the butler who scolded herself for losing the key was very upset.", distractor:"x-x-x swarm ill joy accord thy starter variety lot pushed ad our sky tone tubes."},
+{ sent:"Todd wanted to be a barber, but his shaky hands prevented him from becoming one.", distractor:"x-x-x advice sun nor sin gladly, net us plums month proposals net dark absolute am."},
+{ sent:"Cathy will burn the wood she gathered last week, but she will save some of it.", distractor:"x-x-x week node buy plus buy servants acts want, thy tax laws wood step met got."},
+{ sent:"Yesterday the wife of the politician discussed health care with old people.", distractor:"x-x-x sin both bad off refinement evolution cities none thin am quoted."},
+{sent:"The robber shot the jeweler and the salesman reported the crime to the police.", distractor:"x-x-x jammed soul own tutored thy am marketed relation sin ought joy ago helped."},
+{sent:"Julie dated Adam and Andy, but she married Jeff in Las Vegas last month.", distractor:"x-x-x boats Fail buy Oven, mid tax society Huts bad Pit Vases milk angle."},
+{sent:"The niece of the butler who scolded herself for losing the key was very upset.", distractor:"x-x-x swarm ill joy accord thy starter variety lot pushed ad our sky tone tubes."},
+{sent:"The cute girl who was on the cover of the magazine became a famous doctor.", distractor:"x-x-x clot done net mid sum nor apply gas eat velocity growth try injury assume."},
+{sent:"Bob will complete the project he started last month, but Fred won't finish his.", distractor:"x-x-x mere quantity sat suppose joy officer soul funds, fat Kiss inner throne ran."},
+{sent:"The children of the rich man were spoiled, but they were charming and handsome.", distractor:"x-x-x anything oil nor lies net safe manages, law mode soil mobility ran clusters."},
+{ sent:"The aunt of the waiter who trained himself to cook wanted to own a restaurant.", distractor:"x-x-x unto joy per midway net essence pattern map wars report ago we map correspond."},
+{ sent:"The writer of the novels thought himself to be a genius, but he wasn't.", distractor:"x-x-x issued sea lie derive measure islands map tax try lights, thy tax divine."},
+{ sent:"John hired the clerk he will promote last month, but he fired another employee.", distractor:"x-x-x evils nor helps sin baby savings poem fluid, sin sky lease promise villages."},
+{sent:"The journalist criticized Nick, and Sam called the newspaper to complain.", distractor:"x-x-x exercising modulation Dock boy Ha troops am specified us eligible."}
+]

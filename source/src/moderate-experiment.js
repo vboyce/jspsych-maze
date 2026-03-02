@@ -1,0 +1,208 @@
+/**
+ * @title expt1
+ * @description
+ * @version 0.1.0
+ *
+ * @assets assets/
+ */
+
+// You can import stylesheets (.scss or .css).
+import "../styles/main.scss";
+//import SprButtonPlugin from "./spr-buttons.js";
+import MazePlugin from "./maze.js";
+
+import { initJsPsych } from "jspsych";
+
+import HtmlButtonResponsePlugin from "@jspsych/plugin-html-button-response";
+import CanvasButtonResponsePlugin from "@jspsych/plugin-canvas-button-response";
+
+import PreloadPlugin from "@jspsych/plugin-preload";
+import CallFunctionPlugin from "@jspsych/plugin-call-function";
+import SurveyTextPlugin from "@jspsych/plugin-survey-text";
+
+import { proliferate } from "./proliferate.js";
+import { counterbalance, subset } from "./helper.js";
+
+import { stimuli } from "./moderate-stimuli.js";
+import {
+  choices,
+  all_images,
+  format_spr,
+  give_feedback,
+  format_header,
+} from "./constants.js";
+
+import {
+  CONSENT,
+  POST_SURVEY_QS,
+  POST_SURVEY_TEXT,
+  DEBRIEF,
+  INSTRUCTIONS_NS,
+  INSTRUCTIONS2,
+  INSTRUCTIONS_CRITICAL,
+} from "./instructions.js";
+
+import { graph1, graph2 } from "./graph.js";
+import { Deferred } from "jquery";
+/**
+ * This function will be executed by jsPsych Builder and is expected to run the jsPsych experiment
+ *
+ * @type {import("jspsych-builder").RunFunction}
+ */
+
+let select_stimuli = counterbalance(
+  [
+    ["adverb_high", "adverb_low"],
+    ["relative_high", "relative_low"],
+  ],
+  stimuli
+);
+console.log(select_stimuli);
+export async function run({
+  assetPaths,
+  input = {},
+  environment,
+  title,
+  version,
+}) {
+  const jsPsych = initJsPsych({
+    on_close: function () {
+      /*var data = jsPsych.data.get().values();
+      proliferate.submit(
+        { trials: data },
+        () => {
+          //console.log("doing the thing");
+        },
+        (i) => {
+          //console.log("waaaah");
+          //console.log(JSON.stringify(i));
+        }
+      );
+      */
+      jsPsych.data.displayData();
+    },
+  });
+
+  let countCorrect = 0;
+  let done = 1;
+
+  let instructions = {
+    type: HtmlButtonResponsePlugin,
+    stimulus: INSTRUCTIONS_CRITICAL,
+    choices: ["Continue"],
+    response_ends_trial: true,
+    data: { sentence: "foo" },
+  };
+
+  let graph_page = {
+    type: HtmlButtonResponsePlugin,
+    stimulus: `<div>
+    <p><b>Here are your reaction times. Any errors are marked with a <span style="color:red">red x</span>.</b></p>
+      <p> You saw 4 sentences, 2 with relative clauses and 2 with temporal adverbs. 
+      In both cases, there is a temporary syntactic ambiguity about where the clause or adverb attaches, and 
+      <span style="color: rgb(50, 150, 40)">the lower (local) attachment</span> is usually faster to parse than <span style="color: rgb(221, 79, 126)">the higher (non-local) attachment</span>. </p></div>
+<div style="display: flex; flex-direction: column; gap: 20px; align-items: center; width: 100%;">
+  <p style="max-width: 1200px;">The first type of sentences had <b>relative clauses</b>. The reflexive pronoun disambiguates whether the RC modifies <span style="color: rgb(50, 150, 40)">the prepositional object (low) </span> or <span style="color: rgb(221, 79, 126)"> the main subject (high)</span>.</p>
+  <p style="max-width: 1200px;"> The sister of the boy who taught [ <span style="color: rgb(50, 150, 40)">himself</span> | <span style="color: rgb(221, 79, 126)">herself</span> ] advanced mathematics was very smart.</br>
+ The brother of the bride who embarassed [ <span style="color: rgb(50, 150, 40)">herself</span> | <span style="color: rgb(221, 79, 126)">himself</span> ] at the wedding felt ashamed. </p>
+  <div style="width: 100%; max-width: 1200px; height: 400px;">    <canvas id="chart1" style="height: 400px;
+  width: 1200px;"></canvas>
+  </div>  
+    <p style="max-width: 1200px;"> The other type of sentences had <b>temporal adverbs</b> that can modify <span style="color: rgb(50, 150, 40)">the local relative clause verb (low) </span> or <span style="color: rgb(221, 79, 126)"> the main verb (high)</span>. </p>
+ <p style="max-width: 1200px;"> David caught the fish he will cook [ <span style="color: rgb(50, 150, 40)">tomorrow,</span> | <span style="color: rgb(221, 79, 126)">yesterday,</span> ] but it is not his favorite kind.
+</br>
+   Anne will serve the apples she picked [ <span style="color: rgb(50, 150, 40)">yesterday,</span> | <span style="color: rgb(221, 79, 126)">tomorrow,</span> ] but she won't serve the plums.
+ </p>
+    <div style="width: 100%; max-width: 1200px; height: 400px;">
+      <canvas id="chart2" style="height: 400px;
+  width: 1200px;"></canvas>
+  </div>
+      `,
+    on_load: function () {
+      const ctx1 = document.getElementById("chart1").getContext("2d");
+      const ctx2 = document.getElementById("chart2").getContext("2d");
+      const data = jsPsych.data.get().values();
+      graph1(ctx1, data);
+      graph2(ctx2, data);
+    },
+    choices: [],
+  };
+
+  let oldgraph = {
+    type: CanvasButtonResponsePlugin,
+    prompt:
+      "<div class=prompt><p>Here's what your reaction times were for the preceding items. Any errors are marked with a red x.</p>" +
+      "These sentences were all from Bousquet et al (2020), which looks at verbs that usually occur with direct objects (DO) or sentence " +
+      "complements (SC) and are presented with either DO or SC. The expectation is that there is a mild match/mismatch effect when the " +
+      "DO  or SC structure is resolved (highlighted region). </p> </div>",
+    stimulus: function (c) {
+      const data = jsPsych.data.get().values();
+      console.log(data);
+      graph(c, data);
+    },
+    choices: [],
+    response_ends_trial: true,
+    on_load: function () {
+      const trial = document.querySelector(".jspsych-content-wrapper");
+      const prompt = trial.querySelector(".prompt");
+      console.log(prompt);
+      const canva = document.getElementById("jspsych-canvas-stimulus");
+      console.log(canva);
+
+      if (prompt && canva) {
+        console.log("foobar");
+        canva.parentNode.insertBefore(prompt, canva);
+      }
+    },
+  };
+
+  let end_experiment = {
+    type: HtmlButtonResponsePlugin,
+    stimulus: DEBRIEF,
+    choices: ["Continue"],
+    on_finish: function () {
+      jsPsych.data.displayData();
+    },
+  };
+
+  let trial = {
+    type: MazePlugin,
+    correct: jsPsych.timelineVariable("sent"),
+    distractor: jsPsych.timelineVariable("distractor"),
+    css_classes: ["maze-display"],
+    prompt:
+      "<p> Select the next word by pressing <b>e</b> (left) or <b>i</b> (right).</p>",
+    data: {
+      sentence: jsPsych.timelineVariable("sent"),
+      type: jsPsych.timelineVariable("item_type"),
+      item: jsPsych.timelineVariable("id"),
+    },
+  };
+
+  let spacer = {
+    type: HtmlButtonResponsePlugin,
+    stimulus: "",
+    choices: [],
+    trial_duration: 1000,
+    on_finish: function () {
+      done++;
+    },
+  };
+
+  function getTimeline() {
+    //////////////// timeline /////////////////////////////////
+    let timeline = [];
+    timeline.push(instructions);
+    let mini_timeline = {
+      timeline: [trial, spacer],
+      timeline_variables: select_stimuli,
+    };
+    timeline.push(mini_timeline);
+    timeline.push(graph_page);
+    //timeline.push(end_experiment);
+    return timeline;
+  }
+
+  let timeline = getTimeline();
+  await jsPsych.run(timeline);
+}
