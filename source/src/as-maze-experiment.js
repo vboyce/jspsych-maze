@@ -15,7 +15,6 @@ import { initJsPsych } from "jspsych";
 
 import HtmlButtonResponsePlugin from "@jspsych/plugin-html-button-response";
 import PreloadPlugin from "@jspsych/plugin-preload";
-import CallFunctionPlugin from "@jspsych/plugin-call-function";
 import SurveyTextPlugin from "@jspsych/plugin-survey-text";
 
 import { proliferate } from "./proliferate.js";
@@ -47,6 +46,7 @@ import {
 const NUM_ITEMS = 2;
 let done = 1;
 const BONUS = 5;
+let submitted = false;
 
 const select_stimuli = subset(stimuli, NUM_ITEMS);
 const trials = select_stimuli.length;
@@ -58,22 +58,26 @@ export async function run({
   version,
 }) {
   const jsPsych = initJsPsych({
+    on_finish: function () {
+      if (!submitted) {
+        submitted = true;
+        proliferate.submit({ trials: jsPsych.data.get().values() });
+      }
+    },
     on_close: function () {
-      //console.log("start the thing");
+      if (submitted) return;
       var data = jsPsych.data.get().values();
-      //console.log("middle");
-      //console.log(data);
-      //console.log(data[0]);
-      proliferate.submit(
-        { trials: data },
-        () => {
-          //console.log("doing the thing");
-        },
-        (i) => {
-          //console.log("waaaah");
-          //console.log(JSON.stringify(i));
-        }
-      );
+      var params = new URLSearchParams(window.location.search);
+      var experiment_id = params.get("experiment_id");
+      var participant_id = params.get("participant_id");
+      if (experiment_id && participant_id) {
+        var url = "https://proliferate.alps.science/experiment/" +
+          experiment_id + "/complete";
+        var formData = new FormData();
+        formData.append("data", JSON.stringify({ trials: data }));
+        formData.append("participant_id", participant_id);
+        navigator.sendBeacon(url, formData);
+      }
     },
   });
 
@@ -91,6 +95,18 @@ export async function run({
     stimulus: INSTRUCTIONS,
     choices: ["Continue"],
     response_ends_trial: true,
+    on_load: function () {
+      if (!document.getElementById("end-experiment-btn")) {
+        const endBtn = document.createElement("button");
+        endBtn.id = "end-experiment-btn";
+        endBtn.textContent = "End Experiment";
+        endBtn.style.cssText = "position:fixed; top:10px; right:10px; z-index:10000; padding:8px 16px; cursor:pointer;";
+        endBtn.addEventListener("click", () => {
+          jsPsych.endExperiment("The experiment was ended early.");
+        });
+        document.body.appendChild(endBtn);
+      }
+    },
   };
 
   let instructions2 = {
@@ -109,14 +125,6 @@ export async function run({
     type: HtmlButtonResponsePlugin,
     stimulus: DEBRIEF,
     choices: ["Continue"],
-  };
-
-  let send_data = {
-    type: CallFunctionPlugin,
-    async: true,
-    func: function (done) {
-      proliferate.submit({ trials: jsPsych.data.get().values() });
-    },
   };
 
   let trial = {
@@ -175,7 +183,6 @@ export async function run({
     }
     //timeline.push(post_test_questions);
     timeline.push(end_experiment);
-    //timeline.push(send_data);
     return timeline;
   }
 

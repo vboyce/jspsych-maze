@@ -1,0 +1,7 @@
+# Node / build tooling
+source/node_modules/
+source/.jspsych-builder/
+source/packaged/
+
+# jspsych-builder / esbuild packaging output
+*.zip

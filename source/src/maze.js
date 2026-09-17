@@ -1,10 +1,5 @@
 import { JsPsych, JsPsychPlugin, ParameterType, TrialType } from "jspsych";
 import {
-  range,
-  Pos,
-  TextInfo,
-  GroupInfo,
-  gatherWordInfo,
   groupText,
 } from "./maze_helper.js";
 
@@ -124,14 +119,14 @@ const info = {
       pretty_name: "width",
       default: 1000,
       description:
-        "The width of the canvas in which the spr moving window is presented.",
+        "The width of the word display container in pixels. Also controls the gap between words.",
     },
     height: {
       type: ParameterType.INT,
       pretty_name: "height",
       default: 100,
       description:
-        "The height of the canvas in which the spr moving window is presented",
+        "The height of the word display container in pixels.",
     },
     grouping_string: {
       //sure why not
@@ -149,25 +144,15 @@ const info = {
     },
   },
 };
-// Reused names
-const SPR_CANVAS = "SprCanvas";
-
 // private variables
 
 let group_index = 0; // keep track of word position
 let correct = []; // list of correct words
 let distractor = []; // list of distractor words
-let correct_words = []; // list of correct words & where to display them
-let distractor_words = []; // list of distractors & where to display them
 let order = []; // list of whether correct word is left or right
 
 let old_html = ""; // be able to reset at end of trial
-let font = ""; // family of the font with px size
-let background_color = ""; // the color of the paper of the text.
-let font_color = ""; // the color of the text.
-let ctx = null; // 2D drawing context
-let gwidth = 0; // width of the canvas
-let gheight = 0; // and the height.
+let font_size = 60; // base font size in px
 let gelement = null; // where things are displayed
 let valid_keys = null; // the valid keys or choices for a response
 let left_keys = []; // keys to select left option
@@ -191,23 +176,14 @@ let redo = null; // are we in redo mode
  * Setup the variables for use at the start of a new trial
  */
 function setupVariables(display_element, trial_pars) {
-  // reset state.
   group_index = 0;
-  correct_words = [];
-  distractor_words = [];
   order = [];
-  ctx = null;
   cumulative_rts = [];
   cumulative_rt = 0;
   responses = [];
 
-  //copy a lot of trial pars
-  font = `${trial_pars.font_size}px ${trial_pars.font_family}`;
   old_html = display_element.innerHTML;
-  background_color = trial_pars.background_color;
-  font_color = trial_pars.font_color;
-  gwidth = trial_pars.width;
-  gheight = trial_pars.height;
+  font_size = trial_pars.font_size;
   gelement = display_element;
   valid_keys = trial_pars.choice_left.concat(trial_pars.choice_right);
   left_keys = trial_pars.choice_left;
@@ -219,20 +195,14 @@ function setupVariables(display_element, trial_pars) {
   redo = trial_pars.redo;
   delay = trial_pars.delay;
 
-  //set up display
-  // var new_html =
-  //   '<div id="jspsych-maze-stimulus">' + trial_pars.normal_message + "</div>"
   var new_html = "<div id='status'>" + trial_pars.prompt + "</div>";
   display_element.innerHTML = new_html;
-  createCanvas(display_element, trial_pars);
+  createWordDisplay(display_element, trial_pars);
   let div = createTextArea(display_element);
   div.innerHTML = normal_message;
-  ctx.font = font;
 
-  // process stimuli
   correct = groupText(trial_pars.correct, trial_pars.grouping_string);
   distractor = groupText(trial_pars.distractor, trial_pars.grouping_string);
-  //check that things that should be the same length are!
   console.assert(
     correct.length == distractor.length,
     "Correct and distractor do not have the same length"
@@ -248,14 +218,6 @@ function setupVariables(display_element, trial_pars) {
     correct.length == order.length,
     "Order is not the same length as correct and distractor"
   );
-
-  [correct_words, distractor_words] = gatherWordInfo(
-    correct,
-    distractor,
-    trial_pars,
-    ctx,
-    order
-  );
 }
 
 function createTextArea(display_element) {
@@ -268,35 +230,58 @@ function createTextArea(display_element) {
   div.id = "feedback";
   return div;
 }
-/**
- * Setup the canvas for use with this plugin
- *
- * @param {HTMLElement} display_element
- * @param {Object} trial Object with trial information
- */
-function createCanvas(display_element, trial_pars) {
-  let canvas = document.createElement("canvas");
-  canvas.setAttribute("width", trial_pars.width);
-  canvas.setAttribute("height", trial_pars.height);
-  canvas.setAttribute("id", SPR_CANVAS);
-  display_element.appendChild(canvas);
-  ctx = canvas.getContext("2d");
+function createWordDisplay(display_element, trial_pars) {
+  let container = document.createElement("div");
+  container.id = "maze-word-container";
+  container.style.display = "flex";
+  container.style.justifyContent = "center";
+  container.style.alignItems = "center";
+  container.style.gap = (trial_pars.width * 0.1) + "px";
+  container.style.fontFamily = trial_pars.font_family;
+  container.style.fontSize = trial_pars.font_size + "px";
+  container.style.color = trial_pars.font_color;
+  container.style.backgroundColor = trial_pars.background_color;
+  container.style.width = trial_pars.width + "px";
+  container.style.height = trial_pars.height + "px";
+  container.style.margin = "0 auto";
+
+  let leftWord = document.createElement("span");
+  leftWord.id = "maze-left-word";
+  leftWord.style.flex = "1";
+  leftWord.style.textAlign = "right";
+  container.appendChild(leftWord);
+
+  let rightWord = document.createElement("span");
+  rightWord.id = "maze-right-word";
+  rightWord.style.flex = "1";
+  rightWord.style.textAlign = "left";
+  container.appendChild(rightWord);
+
+  display_element.appendChild(container);
 }
 
-/**
- * Draws the stimulus on the canvas.
- */
-function drawStimulus(trial_pars, group_index) {
-  // draw background
-  ctx.fillStyle = background_color; // it's entertaining when you don't have this
-  ctx.fillRect(0, 0, gwidth, gheight);
+function scaledFontSize(word) {
+  if (word.length > 12) {
+    return Math.floor(font_size * 12 / word.length) + "px";
+  }
+  return font_size + "px";
+}
 
-  // draw text
-  ctx.fillStyle = font_color;
-  let correct_word = correct_words[group_index];
-  let distractor_word = distractor_words[group_index];
-  correct_word.drawText();
-  distractor_word.drawText();
+function drawStimulus(group_index) {
+  let leftEl = document.getElementById("maze-left-word");
+  let rightEl = document.getElementById("maze-right-word");
+  let leftWord, rightWord;
+  if (order[group_index] === 0) {
+    leftWord = correct[group_index];
+    rightWord = distractor[group_index];
+  } else {
+    leftWord = distractor[group_index];
+    rightWord = correct[group_index];
+  }
+  leftEl.textContent = leftWord;
+  leftEl.style.fontSize = scaledFontSize(leftWord);
+  rightEl.textContent = rightWord;
+  rightEl.style.fontSize = scaledFontSize(rightWord);
 }
 
 /**
@@ -371,7 +356,7 @@ class MazePlugin {
           let div = document.getElementById("feedback");
           div.innerHTML = normal_message;
           installResponse();
-          drawStimulus(trial_pars, group_index);
+          drawStimulus(group_index);
         }
       } else {
         //wrong selection
@@ -403,7 +388,7 @@ class MazePlugin {
 
     setupVariables(display_element, trial_pars);
     installResponse();
-    drawStimulus(trial_pars, group_index);
+    drawStimulus(group_index);
 
     let end_trial = () => {
       this.jsPsych.pluginAPI.clearAllTimeouts();
@@ -412,8 +397,8 @@ class MazePlugin {
       trial_data.rt = reactiontimes;
       trial_data.cumrt = cumulative_rts;
       trial_data.correct = responses;
-      trial_data.words = correct_words.map((a) => a.text);
-      trial_data.distractors = distractor_words.map((a) => a.text);
+      trial_data.words = correct;
+      trial_data.distractors = distractor;
       trial_data.order = order;
       console.log(trial_data);
       this.jsPsych.finishTrial(trial_data);
