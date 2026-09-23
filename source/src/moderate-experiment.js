@@ -1,97 +1,42 @@
 /**
- * @title expt1
- * @description
- * @version 0.1.0
+ * @title Maze demo: attachment ambiguities with an RT graph
+ * @description Counterbalanced relative-clause and adverb attachment items, then a graph of the participant's own RTs.
+ * @version 1.0.0
  *
  * @assets assets/
  */
 
-// You can import stylesheets (.scss or .css).
 import "../styles/main.scss";
-//import SprButtonPlugin from "./spr-buttons.js";
 import MazePlugin from "./maze.js";
-
 import { initJsPsych } from "jspsych";
-
 import HtmlButtonResponsePlugin from "@jspsych/plugin-html-button-response";
-import CanvasButtonResponsePlugin from "@jspsych/plugin-canvas-button-response";
 
-import PreloadPlugin from "@jspsych/plugin-preload";
-import CallFunctionPlugin from "@jspsych/plugin-call-function";
-import SurveyTextPlugin from "@jspsych/plugin-survey-text";
-
-import { proliferate } from "./proliferate.js";
-import { counterbalance, subset } from "./helper.js";
-
+import { counterbalance } from "./helper.js";
 import { stimuli } from "./moderate-stimuli.js";
-import {
-  choices,
-  all_images,
-  format_spr,
-  give_feedback,
-  format_header,
-} from "./constants.js";
-
-import {
-  CONSENT,
-  POST_SURVEY_QS,
-  POST_SURVEY_TEXT,
-  DEBRIEF,
-  INSTRUCTIONS_NS,
-  INSTRUCTIONS2,
-  INSTRUCTIONS_CRITICAL,
-} from "./instructions.js";
-
+import { INSTRUCTIONS_CRITICAL } from "./instructions.js";
 import { graph1, graph2 } from "./graph.js";
-import { Deferred } from "jquery";
-/**
- * This function will be executed by jsPsych Builder and is expected to run the jsPsych experiment
- *
- * @type {import("jspsych-builder").RunFunction}
- */
 
-let select_stimuli = counterbalance(
+
+// Each participant sees every item once, split evenly between its high and
+// low attachment versions.
+const select_stimuli = counterbalance(
   [
     ["adverb_high", "adverb_low"],
     ["relative_high", "relative_low"],
   ],
   stimuli
 );
-console.log(select_stimuli);
-export async function run({
-  assetPaths,
-  input = {},
-  environment,
-  title,
-  version,
-}) {
-  const jsPsych = initJsPsych({
-    on_close: function () {
-      /*var data = jsPsych.data.get().values();
-      proliferate.submit(
-        { trials: data },
-        () => {
-          //console.log("doing the thing");
-        },
-        (i) => {
-          //console.log("waaaah");
-          //console.log(JSON.stringify(i));
-        }
-      );
-      */
-      jsPsych.data.displayData();
-    },
-  });
 
-  let countCorrect = 0;
-  let done = 1;
+// Data isn't submitted anywhere: the demo ends on a graph of the participant's
+// own reaction times.
+export async function run() {
+  const jsPsych = initJsPsych();
 
   let instructions = {
     type: HtmlButtonResponsePlugin,
     stimulus: INSTRUCTIONS_CRITICAL,
     choices: ["Continue"],
     response_ends_trial: true,
-    data: { sentence: "foo" },
   };
 
   let graph_page = {
@@ -128,43 +73,6 @@ export async function run({
     choices: [],
   };
 
-  let oldgraph = {
-    type: CanvasButtonResponsePlugin,
-    prompt:
-      "<div class=prompt><p>Here's what your reaction times were for the preceding items. Any errors are marked with a red x.</p>" +
-      "These sentences were all from Bousquet et al (2020), which looks at verbs that usually occur with direct objects (DO) or sentence " +
-      "complements (SC) and are presented with either DO or SC. The expectation is that there is a mild match/mismatch effect when the " +
-      "DO  or SC structure is resolved (highlighted region). </p> </div>",
-    stimulus: function (c) {
-      const data = jsPsych.data.get().values();
-      console.log(data);
-      graph(c, data);
-    },
-    choices: [],
-    response_ends_trial: true,
-    on_load: function () {
-      const trial = document.querySelector(".jspsych-content-wrapper");
-      const prompt = trial.querySelector(".prompt");
-      console.log(prompt);
-      const canva = document.getElementById("jspsych-canvas-stimulus");
-      console.log(canva);
-
-      if (prompt && canva) {
-        console.log("foobar");
-        canva.parentNode.insertBefore(prompt, canva);
-      }
-    },
-  };
-
-  let end_experiment = {
-    type: HtmlButtonResponsePlugin,
-    stimulus: DEBRIEF,
-    choices: ["Continue"],
-    on_finish: function () {
-      jsPsych.data.displayData();
-    },
-  };
-
   let trial = {
     type: MazePlugin,
     correct: jsPsych.timelineVariable("sent"),
@@ -184,9 +92,6 @@ export async function run({
     stimulus: "",
     choices: [],
     trial_duration: 1000,
-    on_finish: function () {
-      done++;
-    },
   };
 
   function getTimeline() {
@@ -199,7 +104,6 @@ export async function run({
     };
     timeline.push(mini_timeline);
     timeline.push(graph_page);
-    //timeline.push(end_experiment);
     return timeline;
   }
 

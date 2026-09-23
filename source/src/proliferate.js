@@ -51,9 +51,6 @@ export var proliferate = {
     var experiment_id = get_url_param("experiment_id", "NONE");
     var participant_id = get_url_param("participant_id", "NONE");
     var submit_url = PROLIFERATE_SUBMIT_URL.replace("{exp_id}", experiment_id);
-    console.log(experiment_id);
-    console.log(participant_id);
-    console.log(submit_url);
     // debug mode?
     if (experiment_id == "NONE" || participant_id == "NONE") {
       var data_html = htmlify(expdata);

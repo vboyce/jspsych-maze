@@ -1,0 +1,246 @@
+// Kid-friendly styling for the Maze task, used by the kid-maze demo.
+//
+// Every rule is scoped under body.kid-maze, which kid-maze-experiment.js adds
+// to <body>, so these styles never leak into the other demos. The same idea
+// works on platforms that share the page with other content (e.g. Children
+// Helping Science / Lookit): scope your styles under a class you add when
+// your study starts.
+//
+// What makes it kid-friendly: a light background, a rainbow-bordered content
+// card, big rounded buttons, large text on instruction slides, colored
+// feedback messages, a fixed progress bar with pause/stop buttons, and
+// overlays for pausing and stopping.
+
+body.kid-maze {
+  // ── Progress bar ─────────────────────────────────────────────────────────────
+
+  #progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    background: #fff;
+    border-bottom: 2px solid #e5e7eb;
+    padding: 8px 24px 0;
+    font-family: "Open Sans", "Arial", sans-serif;
+  }
+
+  // Takes up the remaining space next to the pause/stop buttons (which are
+  // pushed to the far right via their own auto margin) and centers the zones
+  // within that space — a plain justify-content: center on #progress-bar
+  // wouldn't work here since the buttons' auto margin eats all free space.
+  .progress-zones {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .progress-zone {
+    flex: 1;
+    max-width: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #9ca3af;
+
+    .progress-track {
+      width: 100%;
+      height: 4px;
+      border-radius: 2px 2px 0 0;
+      background: #e5e7eb;
+      margin-top: auto;
+      overflow: hidden;
+    }
+
+    // Fill grows left-to-right as sentences within the section are completed
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #e5e7eb;
+      transition: width 0.2s ease;
+    }
+
+    &.active {
+      color: #1e40af;
+      .progress-fill { background: #3b82f6; }
+    }
+
+    &.done {
+      color: #15803d;
+      .progress-fill { background: #4ade80; }
+    }
+  }
+
+  // ── Page shell ──────────────────────────────────────────────────────────────
+
+  & {
+    background: #eef4ff;       // match display element so there's no flash
+    margin: 0;
+  }
+
+  .jspsych-display-element {
+    background: #eef4ff;
+    align-items: center;       // center card horizontally
+    min-height: 100vh;         // fill viewport even on short-content screens
+    padding-top: 60px;         // clear the fixed progress bar
+    box-sizing: border-box;    // padding included in min-height, not added on top
+  }
+
+  // Colorful border: wrapper provides the gradient background; the inner
+  // content card sits inside with 6px gap that shows through as the border.
+  .jspsych-content-wrapper {
+    display: block;        // override jspsych's flex so card fills naturally
+    flex: 0 0 auto;        // override jspsych's flex: 1 1 100% — don't stretch to viewport height
+    background: linear-gradient(135deg, #f97316, #facc15, #4ade80, #38bdf8, #a78bfa);
+    border-radius: 22px;
+    padding: 6px;
+    margin: 32px auto;
+    max-width: 1160px;
+    width: calc(100% - 48px);
+  }
+
+  .jspsych-content {
+    background: #ffffff;
+    border-radius: 17px;
+    padding: 48px;
+    box-sizing: border-box;
+    text-align: center;
+    max-width: 100%;   // override jspsych's 95%
+    margin: 0;         // override jspsych's auto margins (which add extra side space)
+  }
+
+  // ── Buttons ─────────────────────────────────────────────────────────────────
+
+  .jspsych-btn {
+    background-color: #3b82f6;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 36px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 16px;
+    transition: background-color 0.15s;
+
+    &:hover {
+      background-color: #2563eb;
+      border-color: transparent;
+    }
+
+    &:active {
+      background-color: #1d4ed8;
+      border-color: transparent;
+    }
+
+    &:disabled {
+      background-color: #93c5fd;
+      cursor: not-allowed;
+    }
+  }
+
+  // ── Typography ───────────────────────────────────────────────────────────────
+
+  h2 {
+    color: #1e40af;
+  }
+
+  // ── Instruction slides ────────────────────────────────────────────────────────
+
+  .instruction-slide {
+    p { font-size: 22px; }
+  }
+
+  // ── Maze trials ──────────────────────────────────────────────────────────────
+
+  #status {
+    font-size: 24px;
+    min-height: 64px;
+    padding-bottom: 12px;
+  }
+
+  #feedback {
+    font-size: 26px;
+    min-height: 140px;
+  }
+
+  .feedback-error {
+    color: #dc2626;
+    font-weight: bold;
+  }
+
+  .feedback-redo {
+    color: #1e40af;
+    font-weight: bold;
+  }
+
+  // ── Image screens ────────────────────────────────────────────────────────────
+
+  .img-credit {
+    font-size: 0.7em;
+    color: #888;
+    margin-top: 6px;
+    min-height: 1.4em;
+  }
+
+  // ── Study controls (pause / stop) ────────────────────────────────────────────
+
+  .study-control-btn {
+    background-color: #e5e7eb;
+    color: #374151;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:hover { background-color: #d1d5db; }
+  }
+
+  // Buttons live inside #progress-bar as flex children; push them to the right.
+  #pause-btn {
+    margin-left: auto;
+    margin-right: 8px;
+    align-self: center;
+  }
+
+  #stop-btn {
+    align-self: center;
+  }
+
+  .study-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(255, 255, 255, 0.97);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    font-family: "Open Sans", "Arial", sans-serif;
+    text-align: center;
+    padding: 32px;
+
+    h2 { color: #1e40af; margin: 0; }
+    p  { font-size: 18px; margin: 0; }
+  }
+
+  .study-control-btn--stop {
+    background-color: #fca5a5;
+    color: #7f1d1d;
+    &:hover { background-color: #f87171; }
+  }
+
+}

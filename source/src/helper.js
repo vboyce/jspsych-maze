@@ -10,100 +10,43 @@ export function shuffle(arr) {
   }
 }
 
-function pop_random(items) {
-  let id = Math.floor(Math.random() * items.length);
-  return items[id];
-}
+// The four conditions of the Altmann & Steedman vignettes: which context
+// sentence is shown, and which target sentence follows it.
+const VIGNETTE_CONDITIONS = [
+  ["1-context", "VP"],
+  ["2-context", "VP"],
+  ["1-context", "NP"],
+  ["2-context", "NP"],
+];
 
+// Pick `total` random vignettes and assign each one a condition, keeping the
+// conditions balanced (counts differ by at most one). Returns one group per
+// vignette, [setup, context, target], in random order.
+// `items` rows have `type` ("setup", "1-context", "2-context", "VP", "NP")
+// and `item` (the vignette id).
 export function subset(items, total) {
-  //choose a random N items
-  // shuffle and split into lists
-  //shuffle again for final ordering
-  //for item in order
-  //list.push starter
-  //list.push mid
-  //list.push last
-  let per = total / 4;
-  let nums = [
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11",
-    "12",
-    "13",
-    "14",
-    "15",
-    "16",
-    "17",
-    "18",
-    "19",
-    "20",
-    "21",
-    "22",
-    "23",
-    "24",
-    "25",
-    "26",
-    "27",
-    "28",
-    "29",
-    "30",
-    "31",
-    "32",
-  ];
-  shuffle(nums);
-  let subset = nums.slice(0, total);
-  console.log(subset);
-  let vp_1 = subset.slice(0, per);
-  let vp_2 = subset.slice(per, 2 * per);
-  let np_1 = subset.slice(2 * per, 3 * per);
-  let np_2 = subset.slice(3 * per, 4 * per);
-  console.log("vp-1");
-  console.log(vp_1);
-  console.log("vp-2");
-  console.log(vp_2);
-  console.log("np_1");
-  console.log(np_1);
-  console.log("np_2");
-  console.log(np_2);
-  shuffle(subset);
-  let stims = [];
-  for (let i = 0; i < subset.length; i++) {
-    let mini_stims = [];
-    let item = items.find((e) => (e.type == "setup") & (e.item == subset[i]));
-    mini_stims.push(item);
-    if (vp_1.includes(subset[i])) {
-      item = items.find((e) => (e.type == "1-context") & (e.item == subset[i]));
-      mini_stims.push(item);
-      item = items.find((e) => (e.type == "VP") & (e.item == subset[i]));
-      mini_stims.push(item);
-    } else if (vp_2.includes(subset[i])) {
-      item = items.find((e) => (e.type == "2-context") & (e.item == subset[i]));
-      mini_stims.push(item);
-      item = items.find((e) => (e.type == "VP") & (e.item == subset[i]));
-      mini_stims.push(item);
-    } else if (np_1.includes(subset[i])) {
-      item = items.find((e) => (e.type == "1-context") & (e.item == subset[i]));
-      mini_stims.push(item);
-      item = items.find((e) => (e.type == "NP") & (e.item == subset[i]));
-      mini_stims.push(item);
-    } else if (np_2.includes(subset[i])) {
-      item = items.find((e) => (e.type == "2-context") & (e.item == subset[i]));
-      mini_stims.push(item);
-      item = items.find((e) => (e.type == "NP") & (e.item == subset[i]));
-      mini_stims.push(item);
-    }
-    stims.push(mini_stims);
+  const ids = [...new Set(items.map((e) => e.item))];
+  if (total > ids.length) {
+    throw new Error(`subset: asked for ${total} items but there are only ${ids.length} items`);
   }
-  console.log(stims);
-  return stims;
+  shuffle(ids);
+  const chosen = ids.slice(0, total);
+
+  // Shuffle the condition order so that when total isn't a multiple of 4,
+  // which conditions get the extra items is random.
+  const conditions = VIGNETTE_CONDITIONS.slice();
+  shuffle(conditions);
+
+  function findRow(type, id) {
+    const row = items.find((e) => e.type === type && e.item === id);
+    if (row === undefined) throw new Error(`subset: item ${id} has no "${type}" row`);
+    return row;
+  }
+
+  return chosen.map((id, i) => {
+    const [context, target] = conditions[i % conditions.length];
+    return [findRow("setup", id), findRow(context, id), findRow(target, id)];
+  });
 }
 
 export function counterbalance(item_types, items) {
@@ -128,7 +71,7 @@ export function counterbalance(item_types, items) {
       for (let k = start; k < end; k++) {
         let id = relevant_ids[k];
         relevant.forEach((item) => {
-          if ((item.id == id) & (item.item_type == item_type)) {
+          if (item.id == id && item.item_type == item_type) {
             select_items.push(item);
           }
         });
@@ -137,4 +80,8 @@ export function counterbalance(item_types, items) {
   }
   shuffle(select_items);
   return select_items;
+}
+
+export function capitalize(word) {
+  return word.length === 0 ? word : word[0].toUpperCase() + word.slice(1);
 }

@@ -1,73 +1,33 @@
 /**
- * @title expt1
- * @description
- * @version 0.1.0
+ * @title Maze demo: critical items without redo
+ * @description Maze Made Easy items where a mistake ends the sentence (redo: false).
+ * @version 1.0.0
  *
  * @assets assets/
  */
 
-// You can import stylesheets (.scss or .css).
 import "../styles/main.scss";
-//import SprButtonPlugin from "./spr-buttons.js";
 import MazePlugin from "./maze.js";
-
 import { initJsPsych } from "jspsych";
-
 import HtmlButtonResponsePlugin from "@jspsych/plugin-html-button-response";
-import PreloadPlugin from "@jspsych/plugin-preload";
-import CallFunctionPlugin from "@jspsych/plugin-call-function";
-import SurveyTextPlugin from "@jspsych/plugin-survey-text";
 
 import { proliferate } from "./proliferate.js";
-import { subset } from "./helper.js";
-
+import { makeSubmitHandlers } from "./submit.js";
 import { stimuli } from "./critical-stimuli.js";
-import {
-  choices,
-  all_images,
-  format_spr,
-  give_feedback,
-  format_header,
-} from "./constants.js";
+import { DEBRIEF, INSTRUCTIONS_CRITICAL } from "./instructions.js";
 
-import {
-  CONSENT,
-  POST_SURVEY_QS,
-  POST_SURVEY_TEXT,
-  DEBRIEF,
-  INSTRUCTIONS_CRITICAL,
-  INSTRUCTIONS2,
-} from "./instructions.js";
-/**
- * This function will be executed by jsPsych Builder and is expected to run the jsPsych experiment
- *
- * @type {import("jspsych-builder").RunFunction}
- */
 
-export async function run({
-  assetPaths,
-  input = {},
-  environment,
-  title,
-  version,
-}) {
+export async function run() {
   const jsPsych = initJsPsych({
-    on_close: function () {
-      var data = jsPsych.data.get().values();
-      proliferate.submit(
-        { trials: data },
-        () => {
-          //console.log("doing the thing");
-        },
-        (i) => {
-          //console.log("waaaah");
-          //console.log(JSON.stringify(i));
-        }
-      );
-    },
+    ...makeSubmitHandlers({
+      getData: () => jsPsych.data.get().values(),
+      submit: (data) => proliferate.submit(data),
+      sendBeacon: (url, form) => navigator.sendBeacon(url, form),
+      search: window.location.search,
+    }),
   });
 
-  let done = 1;
+  // Whether the last sentence was finished without a mistake.
   let last_correct;
 
   let instructions = {
@@ -93,13 +53,9 @@ export async function run({
     prompt:
       "<p> Select the next word by pressing <b>e</b> (left) or <b>i</b> (right).</p>",
     on_finish: function (data) {
-      if (data.correct[data.correct.length - 1] == 0) {
-        last_correct = false;
-      } else if (data.correct.length == 0) {
-        last_correct = false;
-      } else {
-        last_correct = true;
-      }
+      // With redo: false the trial ends at the first mistake, so the sentence
+      // was finished correctly iff every word reached was correct.
+      last_correct = data.correct.length === data.words.length && !data.correct.includes(0);
     },
   };
 
@@ -107,16 +63,13 @@ export async function run({
     type: HtmlButtonResponsePlugin,
     stimulus: function () {
       if (last_correct) {
-        return "Great! Continuing to next sentence.</p>";
+        return "<p>Great! Continuing to next sentence.</p>";
       } else {
         return '<p style="color:red;"> Wrong!</p><p>Continuing to next sentence.</p>';
       }
     },
     choices: [],
     trial_duration: 1000,
-    on_finish: function () {
-      done++;
-    },
   };
 
   function getTimeline() {

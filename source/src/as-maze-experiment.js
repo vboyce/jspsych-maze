@@ -1,94 +1,42 @@
 /**
- * @title expt1
- * @description
- * @version 0.1.0
+ * @title Maze demo: Altmann & Steedman vignettes
+ * @description Multi-sentence vignettes with a context that biases a PP attachment ambiguity (redo mode).
+ * @version 1.0.0
  *
  * @assets assets/
  */
 
-// You can import stylesheets (.scss or .css).
 import "../styles/main.scss";
-//import SprButtonPlugin from "./spr-buttons.js";
 import MazePlugin from "./maze.js";
-
 import { initJsPsych } from "jspsych";
-
 import HtmlButtonResponsePlugin from "@jspsych/plugin-html-button-response";
-import PreloadPlugin from "@jspsych/plugin-preload";
-import SurveyTextPlugin from "@jspsych/plugin-survey-text";
 
 import { proliferate } from "./proliferate.js";
+import { makeSubmitHandlers } from "./submit.js";
 import { subset } from "./helper.js";
-
 import { stimuli } from "./as-maze-stimuli.js";
-import {
-  choices,
-  all_images,
-  format_spr,
-  give_feedback,
-  format_header,
-} from "./constants.js";
+import { format_header } from "./constants.js";
+import { DEBRIEF, INSTRUCTIONS, INSTRUCTIONS2 } from "./instructions.js";
 
-import {
-  CONSENT,
-  POST_SURVEY_QS,
-  POST_SURVEY_TEXT,
-  DEBRIEF,
-  INSTRUCTIONS,
-  INSTRUCTIONS2,
-} from "./instructions.js";
-/**
- * This function will be executed by jsPsych Builder and is expected to run the jsPsych experiment
- *
- * @type {import("jspsych-builder").RunFunction}
- */
 
+// Number of vignettes to show; conditions are balanced across them.
 const NUM_ITEMS = 2;
-let done = 1;
-const BONUS = 5;
-let submitted = false;
 
 const select_stimuli = subset(stimuli, NUM_ITEMS);
 const trials = select_stimuli.length;
-export async function run({
-  assetPaths,
-  input = {},
-  environment,
-  title,
-  version,
-}) {
+
+export async function run() {
   const jsPsych = initJsPsych({
-    on_finish: function () {
-      if (!submitted) {
-        submitted = true;
-        proliferate.submit({ trials: jsPsych.data.get().values() });
-      }
-    },
-    on_close: function () {
-      if (submitted) return;
-      var data = jsPsych.data.get().values();
-      var params = new URLSearchParams(window.location.search);
-      var experiment_id = params.get("experiment_id");
-      var participant_id = params.get("participant_id");
-      if (experiment_id && participant_id) {
-        var url = "https://proliferate.alps.science/experiment/" +
-          experiment_id + "/complete";
-        var formData = new FormData();
-        formData.append("data", JSON.stringify({ trials: data }));
-        formData.append("participant_id", participant_id);
-        navigator.sendBeacon(url, formData);
-      }
-    },
+    ...makeSubmitHandlers({
+      getData: () => jsPsych.data.get().values(),
+      submit: (data) => proliferate.submit(data),
+      sendBeacon: (url, form) => navigator.sendBeacon(url, form),
+      search: window.location.search,
+    }),
   });
 
-  let countCorrect = 0;
+  // Vignettes completed so far, shown in the header ("Story 1/2").
   let done = 1;
-  let consent = {
-    type: HtmlButtonResponsePlugin,
-    stimulus: CONSENT,
-    choices: ["Continue"],
-    response_ends_trial: true,
-  };
 
   let instructions = {
     type: HtmlButtonResponsePlugin,
@@ -115,16 +63,13 @@ export async function run({
     choices: ["Continue"],
     response_ends_trial: true,
   };
-  let post_test_questions = {
-    type: SurveyTextPlugin,
-    preamble: POST_SURVEY_TEXT,
-    questions: POST_SURVEY_QS,
-  };
-
   let end_experiment = {
     type: HtmlButtonResponsePlugin,
     stimulus: DEBRIEF,
     choices: ["Continue"],
+    on_load: function () {
+      document.getElementById("end-experiment-btn")?.remove();
+    },
   };
 
   let trial = {
@@ -167,9 +112,6 @@ export async function run({
     //////////////// timeline /////////////////////////////////
     let timeline = [];
 
-    //timeline.push(preload);
-
-    //timeline.push(consent);
     timeline.push(instructions);
     timeline.push(practice);
     timeline.push(instructions2);
@@ -181,7 +123,6 @@ export async function run({
       timeline.push(mini_timeline);
       timeline.push(spacer);
     }
-    //timeline.push(post_test_questions);
     timeline.push(end_experiment);
     return timeline;
   }

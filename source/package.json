@@ -1,29 +1,32 @@
 {
   "private": true,
   "scripts": {
-    "jspsych": "jspsych -e experiment",
-    "start": "npm run jspsych -- run",
-    "build": "npm run jspsych -- build",
-    "jatos": "npm run jspsych -- build --jatos"
+    "test": "vitest run",
+    "start:as-maze": "jspsych run -e as-maze-experiment",
+    "build:as-maze": "jspsych build -e as-maze-experiment",
+    "start:critical": "jspsych run -e critical-experiment",
+    "build:critical": "jspsych build -e critical-experiment",
+    "start:moderate": "jspsych run -e moderate-experiment",
+    "build:moderate": "jspsych build -e moderate-experiment",
+    "start:ns-maze": "jspsych run -e ns-maze-experiment",
+    "build:ns-maze": "jspsych build -e ns-maze-experiment",
+    "start:kid-maze": "jspsych run -e kid-maze-experiment",
+    "build:kid-maze": "jspsych build -e kid-maze-experiment"
   },
   "dependencies": {
-    "@jspsych/plugin-call-function": "^1.1.3",
-    "@jspsych/plugin-canvas-button-response": "^2.1.0",
-    "@jspsych/plugin-fullscreen": "^1.1.2",
     "@jspsych/plugin-html-button-response": "^1.1.3",
     "@jspsych/plugin-html-keyboard-response": "^1.1.2",
     "@jspsych/plugin-preload": "^1.1.2",
-    "@jspsych/plugin-survey-text": "^1.1.3",
     "bootstrap": "^5.3.3",
     "chart.js": "^4.5.1",
     "chartjs-plugin-annotation": "^3.1.0",
-    "install": "^0.13.0",
     "jquery": "^3.7.1",
-    "jspsych": "^7.3.4",
-    "npm": "^11.7.0"
+    "jspsych": "^7.3.4"
   },
   "devDependencies": {
-    "jspsych-builder": "^4.4.0"
+    "jsdom": "^29.1.1",
+    "jspsych-builder": "^4.4.0",
+    "vitest": "^4.1.11"
   },
   "browserslist": ">0.25%, not dead"
 }

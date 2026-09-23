@@ -23,35 +23,35 @@ Chart.register(
   Legend
 );
 
+// Draws the words of the two sentences under each x position, one above the
+// other, coloring the words at the highlighted (critical) position by condition.
+// The highlighted index comes from options.plugins.multiColorLabels.highlight.
 const multiColorPlugin = {
   id: "multiColorLabels",
-  afterDraw: (chart) => {
+  afterDraw: (chart, _args, options) => {
     const ctx = chart.ctx;
     const xAxis = chart.scales.x;
+    const highlight = options.highlight;
 
     ctx.save();
     xAxis.ticks.forEach((tick, index) => {
       const x = xAxis.getPixelForTick(index);
       const y = xAxis.bottom - 15;
-      // Split label into words
-      //const words = tick.label.split(" ");
-      //console.log(words);
       ctx.textAlign = "center";
       ctx.font = "16px Arial";
-      console.log(tick.label[0]);
-      // Draw first word in red
-      if (index == 7) {
+      // First sentence's word (high attachment, sorted first)
+      if (index === highlight) {
         ctx.fillStyle = "rgb(221, 79, 126)";
       } else {
         ctx.fillStyle = "black";
       }
       ctx.fillText(tick.label[0], x, y);
-      if (index == 7) {
+      if (index === highlight) {
         ctx.fillStyle = "rgb(50, 150, 40)";
       } else {
         ctx.fillStyle = "black";
       }
-      // Draw second word in blue below it
+      // Second sentence's word (low attachment) below it
       ctx.fillText(tick.label[1], x, y + 30);
     });
     ctx.restore();
@@ -59,7 +59,9 @@ const multiColorPlugin = {
 };
 
 Chart.register(annotationPlugin);
-import { sample_data } from "./sample_data.js";
+
+// Position of the disambiguating word in the moderate demo's sentences.
+const CRITICAL_WORD_INDEX = 7;
 
 export function clean_data(d) {
   let relevant = d.filter((item) => {
@@ -72,23 +74,23 @@ export function graph1(c, d) {
   let relevant = d
     .filter((item) => {
       return (
-        (item.trial_type == "maze") &
+        item.trial_type == "maze" &&
         ["relative_high", "relative_low"].includes(item.type)
       );
     })
     .sort((a, b) => a.type.localeCompare(b.type));
-  graph(c, relevant, 7);
+  graph(c, relevant, CRITICAL_WORD_INDEX);
 }
 export function graph2(c, d) {
   let relevant = d
     .filter((item) => {
       return (
-        (item.trial_type == "maze") &
+        item.trial_type == "maze" &&
         ["adverb_high", "adverb_low"].includes(item.type)
       );
     })
     .sort((a, b) => a.type.localeCompare(b.type));
-  graph(c, relevant, 7);
+  graph(c, relevant, CRITICAL_WORD_INDEX);
 }
 export function graph(c, d, highlight) {
   const data = clean_data(d);
@@ -100,8 +102,6 @@ export function graph(c, d, highlight) {
     adverb_low: "rgb(50, 150, 40)",
   };
 
-  //0, 89, 0), (0, 0, 120), (73, 13, 0), (138, 3, 79), (0, 90, 138), (68, 53, 0),
-  //(64, 83, 211), (221, 179, 16), (181, 29, 20), (0, 190, 255), (251, 73, 176), (0, 178, 93), (202, 202, 202)]
   const datasets = data.map((item, idx) => ({
     label: item.type,
     data: item.rt,
@@ -120,11 +120,11 @@ export function graph(c, d, highlight) {
       return item.correct.map((val) =>
         val > 0 ? colors[item.type] : "rgb(255,0,0)"
       );
-    }, // Triangle if > 25
+    },
     pointHoverRadius: 7,
     words: item.words,
     pointStyle: function () {
-      return item.correct.map((val) => (val > 0 ? "circle" : "crossRot")); // Triangle if > 25
+      return item.correct.map((val) => (val > 0 ? "circle" : "crossRot"));
     },
   }));
 
@@ -134,8 +134,10 @@ export function graph(c, d, highlight) {
   const word_labels = Array.from(
     { length: maxLength },
     (_, i) => data.map((obj) => obj.words[i] || "")
-    //.join(" ")
   );
+
+  // Shade the critical region up to the slowest RT shown.
+  const maxRt = Math.max(...data.flatMap((obj) => obj.rt));
 
   Chart.defaults.font.size = 16; // Default is 12
 
@@ -150,6 +152,7 @@ export function graph(c, d, highlight) {
       responsive: true,
       layout: { padding: { bottom: 40, right: 100 } },
       plugins: {
+        multiColorLabels: { highlight: highlight },
         legend: {
           display: true,
           position: "top",
@@ -161,7 +164,7 @@ export function graph(c, d, highlight) {
               xMin: highlight - 0.5,
               xMax: highlight + 0.5,
               yMin: 0,
-              yMax: 1000,
+              yMax: maxRt,
               backgroundColor: "rgba(100, 99, 132, 0.2)",
               borderColor: "rgb(100, 99, 132)",
               borderWidth: 1,
