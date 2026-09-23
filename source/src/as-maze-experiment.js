@@ -2,8 +2,6 @@
  * @title Maze demo: Altmann & Steedman vignettes
  * @description Multi-sentence vignettes with a context that biases a PP attachment ambiguity (redo mode).
  * @version 1.0.0
- *
- * @assets assets/
  */
 
 import "../styles/main.scss";

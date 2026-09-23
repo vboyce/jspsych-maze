@@ -2,8 +2,6 @@
  * @title Maze demo: Natural Stories passage
  * @description One Natural Stories passage, read sentence by sentence (redo mode).
  * @version 1.0.0
- *
- * @assets assets/
  */
 
 import "../styles/main.scss";

@@ -2,8 +2,6 @@
  * @title Maze demo: attachment ambiguities with an RT graph
  * @description Counterbalanced relative-clause and adverb attachment items, then a graph of the participant's own RTs.
  * @version 1.0.0
- *
- * @assets assets/
  */
 
 import "../styles/main.scss";

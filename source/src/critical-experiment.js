@@ -2,8 +2,6 @@
  * @title Maze demo: critical items without redo
  * @description Maze Made Easy items where a mistake ends the sentence (redo: false).
  * @version 1.0.0
- *
- * @assets assets/
  */
 
 import "../styles/main.scss";

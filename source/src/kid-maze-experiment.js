@@ -3,7 +3,7 @@
  * @description A kid-friendly Maze task (ages 8-12): guided practice, two short passages with pictures, a progress bar, and pause/stop buttons.
  * @version 1.0.0
  *
- * @assets assets/
+ * @assets assets/images/kid/
  */
 
 // Based on kid-maze-passages expt-1 (https://github.com/vboyce/kid-maze-passages),
