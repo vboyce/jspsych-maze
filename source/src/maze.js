@@ -13,13 +13,14 @@
  *   rt          ms to the first press on each word reached
  *   correct     1 if the first press on each word reached was correct, else 0
  *   cumrt       ms from each word appearing to the correct press, including
- *               any error delay and error_guard time. Only words answered
- *               correctly have an entry, so when a redo=false trial ends on a
- *               mistake, cumrt is one shorter than rt and correct.
+ *               any error delay and error_guard time. When a redo=false trial
+ *               ends on a mistake, that word's entry is null (the correct word
+ *               was never chosen).
  *   words       the whole sentence, split into words (or groups)
  *   distractors the distractors, split the same way
  *   order       0 = correct word on the left, 1 = on the right, for every position
- * rt, correct and cumrt stop at the mistake that ends a redo=false trial.
+ * rt, correct and cumrt always have the same length; with redo=false they stop
+ * at the mistake that ends the trial.
  */
 import { ParameterType } from "jspsych";
 import {
@@ -410,6 +411,9 @@ class MazePlugin {
           if (newHtml != null) currentRedoMsg = newHtml;
         }
         if (redo === false) {
+          // The correct word was never chosen, so there is no time-to-correct.
+          // null keeps cumrt the same length as rt and correct.
+          cumulative_rts.push(null);
           end_trial();
         } else {
           if (delay === null) {

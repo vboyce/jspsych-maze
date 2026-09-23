@@ -85,11 +85,11 @@ Each maze trial records:
 |---|---|
 | `rt` | ms to the first key press on each word reached. |
 | `correct` | 1 if that first press was correct, else 0. |
-| `cumrt` | ms from each word appearing to the correct press. This includes time spent on wrong presses, the error `delay` and `error_guard`. Only words answered correctly get an entry, so when a `redo: false` trial ends on a mistake, `cumrt` is one shorter than `rt`. |
+| `cumrt` | ms from each word appearing to the correct press. This includes time spent on wrong presses, the error `delay` and `error_guard`. When a `redo: false` trial ends on a mistake, that word's entry is `null`, since the correct word was never chosen. |
 | `words`, `distractors` | The sentence and distractors, split into words. |
 | `order` | 0 or 1 for each position (0 = correct word on the left). |
 
-With `redo: true` every trial runs to the end of the sentence, so `rt`, `correct` and `cumrt` all have one entry per word. With `redo: false`, they stop at the first mistake. Add your own fields (item id, condition) with jsPsych's `data` parameter.
+`rt`, `correct` and `cumrt` always have the same length. With `redo: true` every trial runs to the end of the sentence, so they have one entry per word. With `redo: false`, they stop at the first mistake. In that mode `cumrt` equals `rt` apart from the final `null`, so it adds nothing. Add your own fields (item id, condition) with jsPsych's `data` parameter.
 
 ## Demos
 

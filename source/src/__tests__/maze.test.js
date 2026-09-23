@@ -320,6 +320,18 @@ describe("MazePlugin — redo mode", () => {
     expect(data.rt).toEqual([100, 200]);
     expect(data.correct).toEqual([1, 0]);
   });
+
+  it("redo=false: cumrt has null for the word answered wrongly, so it lines up with rt", () => {
+    const jsPsych = makeMockJsPsych();
+    const plugin = new MazePlugin(jsPsych);
+    plugin.trial(makeDisplay(), makeParams({ order: [0, 0, 0], redo: false }));
+
+    jsPsych.pressKey("e", 100); // correct
+    jsPsych.pressKey("i", 200); // wrong → trial ends
+
+    const data = jsPsych.finishTrial.mock.calls[0][0];
+    expect(data.cumrt).toEqual([100, null]);
+  });
 });
 
 describe("MazePlugin — state isolation between trials", () => {
